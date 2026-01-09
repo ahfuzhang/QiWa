@@ -23,6 +23,10 @@ C# 曾经是我刚工作时最喜欢的语言。时隔20多年要再次使用这
 在云时代，C# 的设计理念已经不如 Rust/golang 这样的更加现代化的语言。
 
 因此，我打算反向抄袭，把 golang 领域的经验应用到 C# 上，基于 C# 实现一个高性能的微服务框架。
+C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产于欧洲的）茶隼 sūn 】.
+因此这是一个 七娃 加上 红隼 的组合，本项目的官方图标如下：
+
+<img src="./doc/images/QiWa_with_Kestrel.png" style="zoom: 25%;" />
 
 # 目标
 
@@ -57,7 +61,7 @@ C# 曾经是我刚工作时最喜欢的语言。时隔20多年要再次使用这
     - 连接池
   - 使用 context 对象，会造成内存分配的部分都提前在 context 中定义成员。在请求开始时，从内存池获得 context 对象，请求结束后放回 context 对象。
 * 异常处理：
-  - 基于 tuple 来做多返回值。不使用任何的 try catch
+  - 基于 tuple 来做多返回值。不使用任何的 try catch (模仿 golang 的 error 对象)
   - try finnaly 是特例，可以使用
   - 不使用任何含有 throw 语句的函数或方法
     - 如果第三方库含有 throw，则立即使用 try-catch 包装。
@@ -92,7 +96,7 @@ C# 曾经是我刚工作时最喜欢的语言。时隔20多年要再次使用这
     - 自动进行 caller - callee 之间的请求量/错误量/延迟分布的上报
   - logging:  
     - 模仿 uber zaplog 组件，提供没有栈逃逸的 log tag
-    - 日志先达到内存，积累到一定的量再输出到 stdout
+    - 日志先追加到内存buffer，积累到一定的量再输出到 stdout
     - 日志始终向一个大的 buffer 追加，避免拷贝
     - 请求开始时，通过 context 产生对应的 logger 对象，以便打印公共字段
     - 使用 thread local, 以此来避免加锁
@@ -126,6 +130,10 @@ C# 曾经是我刚工作时最喜欢的语言。时隔20多年要再次使用这
   - 使用 switch case '/path' 的模式来处理路由，在编译期就提供高性能的路由转发
   - 协议设计
     - 协议中有 caller 的字段，方便进行 debug
+* 过载保护
+  - 背压(back presure)支持，拒绝无法处理的请求
+* utf-8 string
+  - 全部基于 utf-8 string 来处理。避免频繁的 utf-8 / utf-16 的转换
 
 ```csharp
 /// 这是一个业务函数回调的样式
