@@ -27,7 +27,7 @@ internal static class Program {
 
     private static void ConfigureThreadPool(int? max) {
         if (max.HasValue) {
-            // it must: set min and set max
+            // it must: set min first then set max
             ThreadPool.SetMinThreads(max.Value, max.Value);
             ThreadPool.SetMaxThreads(max.Value, max.Value);
             Console.WriteLine($"set: workThreads={max.Value}, completionPortThreads={max.Value}");
