@@ -16,7 +16,7 @@ namespace FileUtils {
                     bufferSize: 1,
                     options: FileOptions.Asynchronous | FileOptions.SequentialScan);
                 int readLen = await stream.ReadAsync(_temp, 0, 1);
-                return readLen==1;
+                return readLen == 1;
             }
             catch (FileNotFoundException) {
                 return false;

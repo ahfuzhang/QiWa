@@ -7,7 +7,7 @@ class Program
 {
     static void Main()
     {
-        var config = DefaultConfig.Instance.WithArtifactsPath("../../build/benchmarks");
+        var config = DefaultConfig.Instance.WithArtifactsPath("./build/benchmarks");
         BenchmarkRunner.Run<RentBufferBench>(config);
     }
 }

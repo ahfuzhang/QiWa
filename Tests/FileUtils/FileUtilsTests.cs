@@ -3,6 +3,9 @@ using Xunit;
 
 
 public class UtilsTests {
+    private static string GetDataPath(string fileName) {
+        return Path.Combine(AppContext.BaseDirectory, "data", fileName);
+    }
 
     struct TestTableForFileExistsAndNotEmptyAsync {
         public string Name;
@@ -13,12 +16,11 @@ public class UtilsTests {
     [Fact]
     public async Task FileExistsAndNotEmptyAsyncTest() {
         TestTableForFileExistsAndNotEmptyAsync[] table = {
-            new TestTableForFileExistsAndNotEmptyAsync{Name="happy path",FilePath="../../../test/data/metrics.txt", Expected=true},
-            new TestTableForFileExistsAndNotEmptyAsync{Name="file not exists",FilePath="../../../test/data/metrics.txt.abc", Expected=false},
-            new TestTableForFileExistsAndNotEmptyAsync{Name="empty file", FilePath="../../../test/data/empty.txt", Expected=false},
-            new TestTableForFileExistsAndNotEmptyAsync{Name="dir not exists",FilePath="../../../test/data1/metrics.txt", Expected=false},
+            new TestTableForFileExistsAndNotEmptyAsync{Name="happy path",FilePath=GetDataPath("metrics.txt"), Expected=true},
+            new TestTableForFileExistsAndNotEmptyAsync{Name="file not exists",FilePath=GetDataPath("metrics.txt.abc"), Expected=false},
+            new TestTableForFileExistsAndNotEmptyAsync{Name="empty file", FilePath=GetDataPath("empty.txt"), Expected=false},
+            new TestTableForFileExistsAndNotEmptyAsync{Name="dir not exists",FilePath=Path.Combine(AppContext.BaseDirectory, "data1", "metrics.txt"), Expected=false},
         };
-        Console.WriteLine("----------------------------------" + Directory.GetCurrentDirectory());
         Task<bool>[] tasks = new Task<bool>[table.Length];
         for (int i = 0; i < table.Length; i++) {
             tasks[i] = FileUtils.Utils.FileExistsAndNotEmptyAsync(table[i].FilePath);
@@ -29,18 +31,6 @@ public class UtilsTests {
             Assert.True(results[i] == table[i].Expected,
                 $"Test={table[i].Name}, expected={table[i].Expected}, actual={results[i]}");
         }
-        // const string path = "test/data/metrics.txt";
-        // bool exists = await FileUtils.Utils.FileExistsAndNotEmptyAsync(path);
-        // Assert.True(exists);
-        // bool willNotExists = await FileUtils.Utils.FileExistsAndNotEmptyAsync(path+".abc");
-        // Assert.False(willNotExists);
-        // const string emptyFile = "test/data/empty.txt";
-        // bool empty = await FileUtils.Utils.FileExistsAndNotEmptyAsync(emptyFile);
-        // Assert.False(empty);
-        // //
-        // const string dirNotExists = "test/data1/metrics.txt";
-        // exists = await FileUtils.Utils.FileExistsAndNotEmptyAsync(dirNotExists);
-        // Assert.False(exists);
     }
 
     struct testTableFForReadAll {
@@ -54,7 +44,7 @@ public class UtilsTests {
         var table = new testTableFForReadAll[] {
             new testTableFForReadAll{
                 Name="happy path",
-                inputFile="../../../test/data/metrics.txt",
+                inputFile=GetDataPath("metrics.txt"),
                 Expected = {
                     Item1=new Common.RentedBuffer{},
                     Item2=new Common.Error{Code=0}
@@ -62,7 +52,7 @@ public class UtilsTests {
             },
             new testTableFForReadAll{
                 Name="empty file",
-                inputFile="../../../test/data/empty.txt",
+                inputFile=GetDataPath("empty.txt"),
                 Expected = {
                     Item1=new Common.RentedBuffer{},
                     Item2=new Common.Error{Code=2}
