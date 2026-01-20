@@ -18,6 +18,9 @@ run:
 fmt:
 	$(DOTNET) format
 
+test:
+	dotnet test
+
 # coverage:
 # 	dotnet test /p:CollectCoverage=true /p:CoverletOutput=../../build/TestResults/ /p:CoverletOutputFormat=opencover
 

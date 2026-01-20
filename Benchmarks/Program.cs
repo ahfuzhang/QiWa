@@ -5,9 +5,9 @@ namespace Benchmarks;
 
 class Program
 {
-    static void Main()
+    static void Main(string[] args)
     {
         var config = DefaultConfig.Instance.WithArtifactsPath("./build/benchmarks");
-        BenchmarkRunner.Run<RentBufferBench>(config);
+        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);
     }
 }

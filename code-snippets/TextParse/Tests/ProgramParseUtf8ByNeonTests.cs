@@ -1,0 +1,52 @@
+using System.Collections.Generic;
+using System.Text;
+using Xunit;
+
+public class ProgramParseUtf8ByNeonTests {
+    private struct TestCase {
+        public string Name;
+        public string Input;
+        public Dictionary<string, string> Tags;
+        public string Expected;
+    }
+
+    [Fact]
+    public void ParseTextUtf8ByNeon_TableDriven() {
+        var cases = new[] {
+            new TestCase {
+                Name = "basic",
+                Input = "# HELP foo\nfoo 1\nbar{code=\"200\"} 2",
+                Tags = new Dictionary<string, string> {
+                    ["env"] = "prod",
+                    ["node"] = "n1",
+                },
+                Expected = "foo{env=\"prod\",node=\"n1\"} 1\nbar{env=\"prod\",node=\"n1\", code=\"200\"} 2",
+            },
+            new TestCase {
+                Name = "leading whitespace dropped",
+                Input = "  baz 3\nqux 4",
+                Tags = new Dictionary<string, string> {
+                    ["env"] = "prod",
+                    ["node"] = "n1",
+                },
+                Expected = "qux{env=\"prod\",node=\"n1\"} 4",
+            },
+            new TestCase {
+                Name = "escape tag values",
+                Input = "foo 1",
+                Tags = new Dictionary<string, string> {
+                    ["path"] = "a\\b",
+                    ["note"] = "x\"y",
+                },
+                Expected = "foo{note=\"x\\\"y\",path=\"a\\\\b\"} 1",
+            },
+        };
+
+        foreach (var testCase in cases) {
+            byte[] input = Encoding.UTF8.GetBytes(testCase.Input);
+            byte[] output = Program.parseTextUtf8ByNeon(input, testCase.Tags);
+            string actual = Encoding.UTF8.GetString(output);
+            Assert.True(actual == testCase.Expected, $"case={testCase.Name}, expected={testCase.Expected}, actual={actual}");
+        }
+    }
+}
