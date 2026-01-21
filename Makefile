@@ -19,11 +19,19 @@ test:
 benchmark:
 	dotnet run --project Benchmarks/Benchmarks.csproj -c Release
 
+benchmark-all:
+	dotnet run --project Benchmarks/Benchmarks.csproj -c Release -- --filter *
+
+flamegraph:
+	dotnet-trace convert --format Speedscope \
+	--output build/benchmarks/trace.speedscope.json \
+	build/benchmarks/Benchmarks.ParseTextUtf8Bench.ParseUtf16-20260120-145256.nettrace
+
 add-package:
 	dotnet add package xunit
 	dotnet add package xunit.runner.visualstudio
 	dotnet add package Microsoft.NET.Test.Sdk
 	dotnet add package coverlet.collector
-
+	dotnet tool install -g dotnet-trace
 
 .PHONY: test

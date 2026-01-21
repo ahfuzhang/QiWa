@@ -3,15 +3,28 @@ using System.Collections.Generic;
 using System.IO;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Running;
+using BenchmarkDotNet.Diagnosers;
 
 namespace Benchmarks;
 
 [MemoryDiagnoser]
 [RankColumn]
 [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[Config(typeof(Config))]
 public class ParseTextUtf8Bench {
     private byte[] _data = Array.Empty<byte>();
     private Dictionary<string, string> _tags = new Dictionary<string, string>();
+
+    private class Config : ManualConfig
+    {
+        public Config()
+        {
+            // 生成 CPU profile 的 .nettrace 文件
+            AddDiagnoser(new EventPipeProfiler(EventPipeProfile.CpuSampling));
+        }
+    }
 
     [GlobalSetup]
     public void Setup() {
