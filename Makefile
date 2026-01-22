@@ -14,7 +14,7 @@ report:
 	-reporttypes:Html
 
 test:
-	dotnet test QiWa.csproj
+	dotnet test QiWa.csproj --logger "console;verbosity=detailed"
 
 benchmark:
 	dotnet run --project Benchmarks/Benchmarks.csproj -c Release
@@ -34,4 +34,7 @@ add-package:
 	dotnet add package coverlet.collector
 	dotnet tool install -g dotnet-trace
 
-.PHONY: test
+fmt:
+	dotnet format QiWa.csproj
+
+.PHONY: test fmt

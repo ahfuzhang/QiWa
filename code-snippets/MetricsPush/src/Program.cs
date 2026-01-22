@@ -180,6 +180,8 @@ internal static class Program
                 metrics.AddMeter(MetricsPushTelemetry.Meter.Name);
                 metrics.AddProcessInstrumentation();
                 metrics.AddRuntimeInstrumentation();
+                metrics.AddHttpClientInstrumentation();
+                metrics.AddAspNetCoreInstrumentation();
                 metrics.AddMeter(
                     "System.Runtime", 
                     "System.Net.Http", 

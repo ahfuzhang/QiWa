@@ -5,15 +5,17 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code-snippets", "code-snippets", "{766FD26F-954F-5A11-20F6-F3AD5B80C62B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SetMaxThreads", "code-snippets\SetMaxThreads\SetMaxThreads.csproj", "{28974DB6-1B27-A4E0-0E83-7D9F766C7ACB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SetMaxThreads", "code-snippets/SetMaxThreads/SetMaxThreads.csproj", "{28974DB6-1B27-A4E0-0E83-7D9F766C7ACB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GracefulShutdown", "code-snippets\GracefulShutdown\GracefulShutdown.csproj", "{E677FFE1-7201-7D44-703E-6A0186DEFEEA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GracefulShutdown", "code-snippets/GracefulShutdown/GracefulShutdown.csproj", "{E677FFE1-7201-7D44-703E-6A0186DEFEEA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextParse", "code-snippets\TextParse\TextParse.csproj", "{67FC0523-F46E-FC4B-E395-B6BFEC8B3673}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextParse", "code-snippets/TextParse/TextParse.csproj", "{67FC0523-F46E-FC4B-E395-B6BFEC8B3673}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricsPush", "code-snippets\MetricsPush\MetricsPush.csproj", "{3CA50EBE-8567-44E9-ADB0-0F5997152483}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricsPush", "code-snippets/MetricsPush/MetricsPush.csproj", "{3CA50EBE-8567-44E9-ADB0-0F5997152483}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricsPush.Tests", "code-snippets\MetricsPush\MetricsPush.Tests.csproj", "{32603F85-9FDA-486E-AB7C-94F559913208}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricsPush.Tests", "code-snippets/MetricsPush/MetricsPush.Tests.csproj", "{32603F85-9FDA-486E-AB7C-94F559913208}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QiWa", "QiWa.csproj", "{CB46829F-1702-4326-948E-0A205EDB1219}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,6 +87,18 @@ Global
 		{32603F85-9FDA-486E-AB7C-94F559913208}.Release|x64.Build.0 = Release|Any CPU
 		{32603F85-9FDA-486E-AB7C-94F559913208}.Release|x86.ActiveCfg = Release|Any CPU
 		{32603F85-9FDA-486E-AB7C-94F559913208}.Release|x86.Build.0 = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|x64.Build.0 = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Debug|x86.Build.0 = Debug|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|x64.ActiveCfg = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|x64.Build.0 = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|x86.ActiveCfg = Release|Any CPU
+		{CB46829F-1702-4326-948E-0A205EDB1219}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
