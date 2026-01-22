@@ -100,6 +100,8 @@ public sealed class MetricsPusher : IDisposable
         }
     }
 
+    private static readonly System.IO.Stream Stdout = Console.OpenStandardOutput();
+
     private async Task PushOnceAsync(CancellationToken token)
     {
         // 1. Get snapshot
@@ -108,12 +110,13 @@ public sealed class MetricsPusher : IDisposable
         {
             return;
         }
-
+        //Console.WriteLine($"payloadLength={payloadLength}, {payload.Length}");
+        //Stdout.Write(payload.Bytes());
         // 2. Compress
         var (compressed, error) = Compress.ZstdCompressor.Compress(payload.Data.AsSpan(0, payloadLength));
         if (error.Err())
         {
-             // Log error?
+             Console.Error.WriteLine($"ERROR metrics push compress failed: code={error.Code} message={error.Message}");
              return;
         }
         int compressedLength = compressed.Length;
@@ -126,7 +129,7 @@ public sealed class MetricsPusher : IDisposable
         
         content.Headers.ContentType = new MediaTypeHeaderValue("text/plain") { CharSet = "utf-8" };
         content.Headers.ContentEncoding.Add("zstd");
-
+        //Console.WriteLine($"ready to post: {compressedLength} bytes, url={_pushUrl}");
         using var response = await _httpClient.PostAsync(_pushUrl, content, token);
         
         if (response.IsSuccessStatusCode)
@@ -134,6 +137,7 @@ public sealed class MetricsPusher : IDisposable
             MetricsPushTelemetry.PushCount.Add(1);
             MetricsPushTelemetry.PayloadBytes.Record(compressedLength);
             MetricsPushTelemetry.PayloadUncompressedBytes.Record(payloadLength);
+            //Console.WriteLine($"post success: {compressedLength} bytes");
             return;
         }
         Console.WriteLine($"Failed to push metrics: {response.StatusCode}");

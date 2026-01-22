@@ -60,7 +60,7 @@ namespace Common {
             // if (Data == null) {
             //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
             // }
-            byte[] newData = ArrayPool<byte>.Shared.Rent(Data.Length*2);
+            byte[] newData = ArrayPool<byte>.Shared.Rent(Data!.Length*2);
             if (Length > 0) {
                 Array.Copy(Data, newData, Length);
             }
@@ -86,7 +86,7 @@ namespace Common {
                 }
 
                 int byteCount = System.Text.Encoding.UTF8.GetByteCount(s);
-                while (Length + byteCount > Data.Length) {
+                while (Length + byteCount > Data!.Length) {
                     Extend();
                 }
 
@@ -105,7 +105,7 @@ namespace Common {
                 return default(Error);
             }
             int byteCount = System.Text.Encoding.UTF8.GetByteCount(s);
-            while (Length + byteCount > Data.Length) {
+            while (Length + byteCount > Data!.Length) {
                 Extend();
             }
             int bytesWritten = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, Data, Length);
@@ -119,7 +119,7 @@ namespace Common {
             //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
             // }
 
-            while (Length + 1 > Data.Length) {
+            while (Length + 1 > Data!.Length) {
                 Extend();
             }
 
@@ -136,7 +136,7 @@ namespace Common {
             if (s.IsEmpty) {
                 return default(Error);
             }
-            while (Length + s.Length > Data.Length) {
+            while (Length + s.Length > Data!.Length) {
                 Extend();
             }
 
@@ -151,7 +151,7 @@ namespace Common {
             //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
             // }
             const int maxByteCount = 20;
-            while (Data.Length - Length < maxByteCount) {
+            while (Data!.Length - Length < maxByteCount) {
                 Extend();
             }
 
@@ -168,7 +168,7 @@ namespace Common {
             //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
             // }
             const int maxByteCount = 20;
-            while (Data.Length - Length < maxByteCount) {
+            while (Data!.Length - Length < maxByteCount) {
                 Extend();
             }
 
@@ -185,7 +185,7 @@ namespace Common {
             //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
             // }
             const int maxByteCount = 5;
-            while (Data.Length - Length < maxByteCount) {
+            while (Data!.Length - Length < maxByteCount) {
                 Extend();
             }
 
@@ -205,7 +205,7 @@ namespace Common {
             }
 
             const int bytesNeeded = 28;
-            while (Data.Length - Length < bytesNeeded) {
+            while (Data!.Length - Length < bytesNeeded) {
                 Extend();
             }
 

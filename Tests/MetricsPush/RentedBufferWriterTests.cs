@@ -15,11 +15,13 @@ public class RentedBufferWriterTests
     }
 
     [Fact]
-    public void Advance_ValidCount_ThrowsInvalidOperationException()
+    public void Advance_ValidCount_UpdatesWrittenCount()
     {
         using var writer = new RentedBufferWriter(100);
         writer.GetSpan(10);
-        Assert.Throws<InvalidOperationException>(() => writer.Advance(10));
+        writer.Advance(10);
+        Assert.Equal(10, writer.WrittenCount);
+        Assert.Equal(10, writer.WrittenSpan.Length);
     }
 
     [Fact]
@@ -45,7 +47,8 @@ public class RentedBufferWriterTests
         var span = writer.GetSpan(1000);
         Assert.True(span.Length >= 1000);
 
-        Assert.Throws<InvalidOperationException>(() => writer.Advance(1000));
+        writer.Advance(1000);
+        Assert.Equal(1000, writer.WrittenCount);
     }
 
     [Fact]
@@ -54,6 +57,8 @@ public class RentedBufferWriterTests
         using var writer = new RentedBufferWriter(10);
         var memory = writer.GetMemory(1000);
         Assert.True(memory.Length >= 1000);
+        writer.Advance(1000);
+        Assert.Equal(1000, writer.WrittenCount);
     }
 
     [Fact]
@@ -62,6 +67,7 @@ public class RentedBufferWriterTests
         // 1. Write some data
         using var writer = new RentedBufferWriter();
         writer.GetSpan(1)[0] = 42;
+        writer.Advance(1);
         
         // 2. Detach
         var buffer = writer.DetachBuffer();
@@ -69,19 +75,13 @@ public class RentedBufferWriterTests
         // 3. Verify buffer
         Assert.NotNull(buffer.Data);
         Assert.Equal(42, buffer.Data[0]);
+        Assert.Equal(1, buffer.Length);
         
-        // 4. Verify writer reset (buffer is default)
-        // Accessing methods might fail or alloc new buffer?
-        // Constructor initializes _buffer. Detach sets _buffer = default.
-        // Calling GetSpan should alloc new buffer?
-        // Let's check logic:
-        // CheckAndResizeBuffer: if _buffer.Data == null? 
-        // _buffer is struct. _buffer.Length will be 0.
-        // availableSpace = 0 - 0 = 0.
-        // sizeHint > 0 -> will rent new buffer.
-        
+        // 4. Verify writer reset
+        Assert.Equal(0, writer.WrittenCount);
         var span = writer.GetSpan(10);
-        Assert.False(span.IsEmpty); // It should recover
+        writer.Advance(10);
+        Assert.Equal(10, writer.WrittenCount);
         
         // Dispose buffer returned
         buffer.Dispose();

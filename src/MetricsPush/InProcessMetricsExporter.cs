@@ -50,13 +50,14 @@ public sealed class InProcessMetricsExporter : BaseExporter<Metric>
             usedLength = 0;
             if (_latest.Data == null || _latestUsed == 0)
             {
-                 return new Common.RentedBuffer();
+                //Console.WriteLine("_latest.Data == null || _latestUsed == 0");
+                return new Common.RentedBuffer();
             }
 
-            var snapshot = new Common.RentedBuffer();
-            snapshot.Rent(_latestUsed); // Rent at least what we need
+            var snapshot = new Common.RentedBuffer(_latestUsed);
             
             Array.Copy(_latest.Data, snapshot.Data!, _latestUsed);
+            snapshot.Length = _latestUsed;
             usedLength = _latestUsed;
             
             return snapshot;
