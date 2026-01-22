@@ -20,3 +20,10 @@ To my dear AI:
   6. 当通过 http 端口访问 `/metrics` 时，返回指标数据。
   7. 提供接口 `/echo`，原样返回请求的内容，包括 Header，返回类似为 `GET /XXX HTTP/1.1\r\nHeaders: xx\r\n\r\n` 的内容。 打印请求日志，把 $method $host$path$querystring $status_code 这样的一行写到日志中。
   8.  日志输出到 stdout，使用 json 格式。日志的时间格式为 _time, 格式化为: `2025-11-25T06:28:33.684852008Z` 这样的格式。
+
+----
+
+* metrics:
+  - rate(http_request_total{pod=~"qiwa-metrics-push-88d88b5c7-00008"}[1m])
+  - 46.3k / s, 无日志输出
+  

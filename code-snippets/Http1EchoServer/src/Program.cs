@@ -43,8 +43,10 @@ internal static class Program {
 
         var pushIntervalOption = new Option<int>("-metrics.push.interval.seconds", () => 15, "Metrics push interval (seconds).");
         var pushAddrOption = new Option<string?>("-metrics.push.addr", "Metrics push address.");
+        pushAddrOption.Arity = ArgumentArity.ZeroOrOne;
         var extraLabelsOption = new Option<string?>("-metrics.push.extra.labels", "Extra labels (a=b&c=d).");
         var maxThreadsOption = new Option<int?>("-threadpool.max", "ThreadPool max threads.");
+        var outputRequestLogOption = new Option<bool>("-output.request.log", () => false, "Output request logs.");
 
         var root = new RootCommand("Http1EchoServer");
         root.AddOption(portOption);
@@ -52,6 +54,7 @@ internal static class Program {
         root.AddOption(pushAddrOption);
         root.AddOption(extraLabelsOption);
         root.AddOption(maxThreadsOption);
+        root.AddOption(outputRequestLogOption);
 
         root.SetHandler(async (context) => {
             var port = context.ParseResult.GetValueForOption(portOption);
@@ -59,14 +62,21 @@ internal static class Program {
             var pushAddr = context.ParseResult.GetValueForOption(pushAddrOption);
             var extraLabels = context.ParseResult.GetValueForOption(extraLabelsOption);
             var maxThreads = context.ParseResult.GetValueForOption(maxThreadsOption);
+            var outputRequestLog = context.ParseResult.GetValueForOption(outputRequestLogOption);
 
-            await RunServerAsync(port, pushInterval, pushAddr, extraLabels, maxThreads);
+            await RunServerAsync(port, pushInterval, pushAddr, extraLabels, maxThreads, outputRequestLog);
         });
 
         return await root.InvokeAsync(args);
     }
 
-    private static async Task RunServerAsync(int port, int pushInterval, string? pushAddr, string? extraLabels, int? maxThreads) {
+    private static async Task RunServerAsync(
+        int port,
+        int pushInterval,
+        string? pushAddr,
+        string? extraLabels,
+        int? maxThreads,
+        bool outputRequestLog) {
         // 1. ThreadPool
         if (maxThreads.HasValue) {
             ThreadPool.SetMinThreads(maxThreads.Value, maxThreads.Value);
@@ -139,7 +149,7 @@ internal static class Program {
 
         // 5. Echo + Logging
         app.Map("/echo", async context => {
-            await HandleEchoRequest(context, logger);
+            await HandleEchoRequest(context, logger, outputRequestLog);
         });
 
         // 6. Graceful Shutdown
@@ -160,7 +170,7 @@ internal static class Program {
         pusher?.Dispose();
     }
 
-    private static async Task HandleEchoRequest(HttpContext context, ILogger logger) {
+    private static async Task HandleEchoRequest(HttpContext context, ILogger logger, bool outputRequestLog) {
         HttpRequestTotal.Add(1);
         var req = context.Request;
         using var rent = new Common.RentedBuffer(1024 * 2);
@@ -185,7 +195,9 @@ internal static class Program {
         rent.Append("\r\n"u8);
         context.Response.ContentType = "text/plain";
         await context.Response.BodyWriter.WriteAsync(rent.Data!.AsMemory(0, rent.Length), context.RequestAborted);
-        LogRequest(context, 200, logger);
+        if (outputRequestLog) {
+            LogRequest(context, 200, logger);
+        }
     }
 
     private static void LogRequest(HttpContext ctx, int statusCode, ILogger logger) {
