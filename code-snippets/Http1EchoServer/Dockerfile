@@ -1,18 +1,14 @@
-#FROM mcr.microsoft.com/dotnet/aspnet:8.0
-FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine
+# Using runtime-deps since we have a self-contained AOT binary
+# Removing -chiseled to allow shell access (/bin/sh) and standard utilities
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble
 
 ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 
 WORKDIR /app
 
-# RUN apt-get update && \
-#     apt-get install -y --no-install-recommends procps && \
-#     rm -rf /var/lib/apt/lists/*
-
 # build/code-snippets/Http1EchoServer/linux/amd64
-COPY bin/Http1EchoServer /app/Http1EchoServer
+# Use --chmod to set execution permissions directly during copy
+COPY --chmod=0755 ./bin/linux/arm64/Http1EchoServer /app/Http1EchoServer
 
-RUN chmod +x /app/Http1EchoServer
-
-#ENTRYPOINT ["/app/KestrelServer", "-addr=0.0.0.0:8081"]
+ENTRYPOINT ["/app/Http1EchoServer"]
 #CMD ["/app/Http1EchoServer", "-addr=0.0.0.0:8081", "-threadpool.min=4", "-threadpool.max=4"]

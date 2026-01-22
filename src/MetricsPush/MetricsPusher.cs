@@ -134,7 +134,9 @@ public sealed class MetricsPusher : IDisposable
             MetricsPushTelemetry.PushCount.Add(1);
             MetricsPushTelemetry.PayloadBytes.Record(compressedLength);
             MetricsPushTelemetry.PayloadUncompressedBytes.Record(payloadLength);
+            return;
         }
+        Console.WriteLine($"Failed to push metrics: {response.StatusCode}");
     }
 
     public void Dispose()

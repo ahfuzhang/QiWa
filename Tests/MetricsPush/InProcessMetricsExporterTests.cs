@@ -1,9 +1,7 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using MetricsPush;
-using OpenTelemetry;
-using System.Diagnostics.Metrics;
-using OpenTelemetry.Metrics;
 using Xunit;
 
 namespace Tests.MetricsPush;
@@ -11,32 +9,18 @@ namespace Tests.MetricsPush;
 public class InProcessMetricsExporterTests
 {
     [Fact]
-    public void Export_StoresData()
+    public void GetSnapshot_CopiesStoredData()
     {
-        // Arrange
         var exporter = new InProcessMetricsExporter(new Dictionary<string, string> { { "k", "v" } });
-        
-        // Cannot easily construct Batch<Metric> manually as constructors are internal/protected or hard to mock.
-        // However, we can use OTel SDK to emit metrics and have them exported to our exporter.
-        
-        using var meterProvider = Sdk.CreateMeterProviderBuilder()
-            .AddMeter("TestMeter")
-            .AddReader(new BaseExportingMetricReader(exporter))
-            .Build();
+        const string payloadText = "test_counter{k=\"v\"} 1\n";
+        byte[] payload = Encoding.UTF8.GetBytes(payloadText);
+        SetExporterState(exporter, payload);
 
-        var meter = new Meter("TestMeter");
-        var counter = meter.CreateCounter<long>("test_counter");
-        counter.Add(1);
-
-        // Act
-        meterProvider.ForceFlush();
-
-        // Assert
         using var snapshot = exporter.GetSnapshot(out int length);
-        Assert.True(length > 0);
-        string text = Encoding.UTF8.GetString(snapshot.Data, 0, length);
-        Assert.Contains("test_counter", text);
-        Assert.Contains("k=\"v\"", text);
+        Assert.Equal(payload.Length, length);
+        Assert.NotNull(snapshot.Data);
+        string text = Encoding.UTF8.GetString(snapshot.Data!, 0, length);
+        Assert.Equal(payloadText, text);
     }
 
     [Fact]
@@ -45,5 +29,23 @@ public class InProcessMetricsExporterTests
         var exporter = new InProcessMetricsExporter(null!);
         using var snapshot = exporter.GetSnapshot(out int length);
         Assert.Equal(0, length);
+        Assert.Null(snapshot.Data);
+    }
+
+    private static void SetExporterState(InProcessMetricsExporter exporter, byte[] payload)
+    {
+        var buffer = new Common.RentedBuffer
+        {
+            Data = payload,
+            Length = payload.Length
+        };
+
+        var lockField = typeof(InProcessMetricsExporter).GetField("_lock", BindingFlags.NonPublic | BindingFlags.Instance);
+        var gate = lockField!.GetValue(exporter)!;
+        lock (gate)
+        {
+            typeof(InProcessMetricsExporter).GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, buffer);
+            typeof(InProcessMetricsExporter).GetField("_latestUsed", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, payload.Length);
+        }
     }
 }

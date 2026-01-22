@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 using MetricsPush;
@@ -42,7 +43,7 @@ public class MetricTextFormatterTests
         Assert.NotEmpty(exportedItems);
         
         // Now call Formatter directly
-        using var writer = new RentedBufferWriter();
+        var writer = new ArrayBufferWriter<byte>();
         var labels = new Dictionary<string, string> { { "global", "gval" } };
         MetricTextFormatter.Format(writer, exportedItems, labels);
         

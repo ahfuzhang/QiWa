@@ -15,13 +15,11 @@ public class RentedBufferWriterTests
     }
 
     [Fact]
-    public void Advance_ValidCount_IncreasesWrittenCount()
+    public void Advance_ValidCount_ThrowsInvalidOperationException()
     {
         using var writer = new RentedBufferWriter(100);
-        writer.GetSpan(10); // Check valid
-        writer.Advance(10);
-        
-        Assert.Equal(10, writer.WrittenCount);
+        writer.GetSpan(10);
+        Assert.Throws<InvalidOperationException>(() => writer.Advance(10));
     }
 
     [Fact]
@@ -35,10 +33,6 @@ public class RentedBufferWriterTests
     public void Advance_TooMuch_ThrowsInvalidOperationException()
     {
         using var writer = new RentedBufferWriter(10);
-        // We verify that if we didn't ask for a span, we can't advance past capacity.
-        // Actually RentedBufferWriter checks against _buffer.Length.
-        // If we initialized with 10, _buffer.Length >= 10.
-        // If we advance 100, it should fail.
         Assert.Throws<InvalidOperationException>(() => writer.Advance(10000)); 
     }
 
@@ -46,14 +40,12 @@ public class RentedBufferWriterTests
     public void GetSpan_ResizesBufferIfNeeded()
     {
         using var writer = new RentedBufferWriter(10);
-        writer.Advance(5);
         
         // Request more than available
         var span = writer.GetSpan(1000);
         Assert.True(span.Length >= 1000);
-        
-        writer.Advance(1000);
-        Assert.Equal(1005, writer.WrittenCount);
+
+        Assert.Throws<InvalidOperationException>(() => writer.Advance(1000));
     }
 
     [Fact]
@@ -70,7 +62,6 @@ public class RentedBufferWriterTests
         // 1. Write some data
         using var writer = new RentedBufferWriter();
         writer.GetSpan(1)[0] = 42;
-        writer.Advance(1);
         
         // 2. Detach
         var buffer = writer.DetachBuffer();

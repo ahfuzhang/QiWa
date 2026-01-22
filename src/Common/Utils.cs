@@ -1,6 +1,7 @@
 
 using System.Buffers;
 
+
 namespace Common {
     public class Utils {
 
@@ -37,6 +38,7 @@ namespace Common {
     public struct Error {
         public System.UInt32 Code;
         public string Message;
+        // todo: 是不是应该加上源码文件和行号?
 
         /// <summary>
         /// 判断是否有错误发生
@@ -47,33 +49,4 @@ namespace Common {
         }
     }
 
-    public struct RentedBuffer : IDisposable {
-        public byte[]? Data;
-        public System.Int32 Length;
-
-        /// <summary>
-        /// 从内存池借用内存
-        /// </summary>
-        /// <param name="length">需要的内存大小</param>
-        /// <exception>out of memory</exception>
-        public void Rent(System.Int32 length) {
-            Data = ArrayPool<byte>.Shared.Rent(length);
-            Length = length;
-        }
-
-        public void Dispose() {
-            if (Data != null) {
-                ArrayPool<byte>.Shared.Return(Data);
-                Data = null;
-                Length = 0;
-            }
-        }
-
-        public Span<byte> Bytes() {
-            if (Data == null || Length == 0) {
-                return Span<byte>.Empty;
-            }
-            return Data.AsSpan(0, Length);
-        }
-    }
 }

@@ -20,6 +20,7 @@ public sealed class InProcessMetricsExporter : BaseExporter<Metric>
 
     public override ExportResult Export(in Batch<Metric> batch)
     {
+        // 类型 Batch 来自 OpenTelemetry
         var items = new List<Metric>();
         foreach (var item in batch)
         {

@@ -4,6 +4,7 @@ using Common;
 
 namespace MetricsPush;
 
+// todo: 这个类不应该存在。应该在 RentedBuffer 的基础上扩展
 public class RentedBufferWriter : IBufferWriter<byte>, IDisposable
 {
     private Common.RentedBuffer _buffer;
@@ -11,8 +12,7 @@ public class RentedBufferWriter : IBufferWriter<byte>, IDisposable
 
     public RentedBufferWriter(int initialCapacity = 256)
     {
-        _buffer = new Common.RentedBuffer();
-        _buffer.Rent(initialCapacity);
+        _buffer = new Common.RentedBuffer(initialCapacity);
         _written = 0;
     }
 

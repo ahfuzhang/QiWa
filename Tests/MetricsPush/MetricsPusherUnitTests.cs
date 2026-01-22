@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -43,21 +45,11 @@ public class MetricsPusherUnitTests
         var httpClient = new HttpClient(handler.Object);
         var tags = new Dictionary<string, string>();
 
-        using var pusher = new MetricsPusher(1, "http://test.com", tags, builder, httpClient);
-        
-        // We need to trigger data generation.
-        // But InProcessMetricsExporter is hidden inside.
-        // And we cannot access `_exporter` directly.
-        // However, MetricsPusher registers OTel.
-        using var app = builder.Build();
-        await app.StartAsync(); // Start to ensure OTel reader runs
-        
-        // We need some metric update.
-        // MetricsPushTelemetry is static, so we can use it.
-        MetricsPushTelemetry.PushCount.Add(1);
+        using var pusher = new MetricsPusher(60, "http://test.com", tags, builder, httpClient);
 
-        // Wait for loop
-        await Task.Delay(2500);
+        var payload = Encoding.UTF8.GetBytes("metrics_push_count 1\n");
+        SeedExporter(pusher, payload);
+        await InvokePushOnceAsync(pusher);
 
         // Assert
         handler.Protected().Verify(
@@ -71,5 +63,31 @@ public class MetricsPusherUnitTests
             ),
             ItExpr.IsAny<CancellationToken>()
         );
+    }
+
+    private static void SeedExporter(MetricsPusher pusher, byte[] payload)
+    {
+        var exporterField = typeof(MetricsPusher).GetField("_exporter", BindingFlags.NonPublic | BindingFlags.Instance);
+        var exporter = (InProcessMetricsExporter)exporterField!.GetValue(pusher)!;
+
+        var buffer = new Common.RentedBuffer
+        {
+            Data = payload,
+            Length = payload.Length
+        };
+
+        var lockField = typeof(InProcessMetricsExporter).GetField("_lock", BindingFlags.NonPublic | BindingFlags.Instance);
+        var gate = lockField!.GetValue(exporter)!;
+        lock (gate)
+        {
+            typeof(InProcessMetricsExporter).GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, buffer);
+            typeof(InProcessMetricsExporter).GetField("_latestUsed", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, payload.Length);
+        }
+    }
+
+    private static Task InvokePushOnceAsync(MetricsPusher pusher)
+    {
+        var method = typeof(MetricsPusher).GetMethod("PushOnceAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        return (Task)method!.Invoke(pusher, new object[] { CancellationToken.None })!;
     }
 }

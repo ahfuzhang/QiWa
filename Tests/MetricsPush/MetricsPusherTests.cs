@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Xunit;
 using MetricsPush;
@@ -19,8 +20,9 @@ public class MetricsPusherTests : IDisposable
     private readonly string _listenUrl;
     private readonly Task _serverTask;
     private readonly CancellationTokenSource _serverCts;
-    private byte[] _lastReceivedBody;
-    private string _lastContentEncoding;
+    private readonly TaskCompletionSource<bool> _requestReceived;
+    private byte[]? _lastReceivedBody;
+    private string? _lastContentEncoding;
 
     public MetricsPusherTests()
     {
@@ -31,6 +33,7 @@ public class MetricsPusherTests : IDisposable
         _listener.Start();
         
         _serverCts = new CancellationTokenSource();
+        _requestReceived = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _serverTask = Task.Run(() => ServerLoop(_serverCts.Token));
     }
 
@@ -49,6 +52,7 @@ public class MetricsPusherTests : IDisposable
                     _lastReceivedBody = ms.ToArray();
                 }
                 _lastContentEncoding = request.Headers["Content-Encoding"];
+                _requestReceived.TrySetResult(true);
 
                 context.Response.StatusCode = 200;
                 context.Response.Close();
@@ -72,24 +76,16 @@ public class MetricsPusherTests : IDisposable
         var builder = WebApplication.CreateBuilder();
         var tags = new Dictionary<string, string> { { "env", "test" } };
         
-        // Use a short interval for testing
-        // Note: PeriodicExportingMetricReader respects the interval.
-        var pusher = new MetricsPusher(1, _listenUrl, tags, builder);
-        
-        using var app = builder.Build();
-        await app.StartAsync(); // Start the host to activate OTel
-        
-        // Act
-        // We wait for some time to allow the timer to trigger and push.
-        
-        // We also need to ensure some metrics are recorded.
-        MetricsPushTelemetry.PushCount.Add(10);
-        
-        await Task.Delay(3500); // Wait for at least one or two pushes
+        using var pusher = new MetricsPusher(60, _listenUrl, tags, builder);
+
+        var payload = Encoding.UTF8.GetBytes("metrics_push_count{env=\"test\"} 10\n");
+        SeedExporter(pusher, payload);
+        await InvokePushOnceAsync(pusher);
+        await _requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         // Assert
         Assert.NotNull(_lastReceivedBody);
-        Assert.True(_lastReceivedBody.Length > 0);
+        Assert.True(_lastReceivedBody!.Length > 0);
         Assert.Equal("zstd", _lastContentEncoding);
 
         // Decompress and verify
@@ -99,9 +95,6 @@ public class MetricsPusherTests : IDisposable
         
         Assert.Contains("metrics_push_count", text);
         Assert.Contains("env=\"test\"", text);
-        
-        pusher.Dispose();
-        await app.StopAsync();
     }
 
     public void Dispose()
@@ -109,5 +102,31 @@ public class MetricsPusherTests : IDisposable
         _serverCts.Cancel();
         _listener.Stop();
         _listener.Close();
+    }
+
+    private static void SeedExporter(MetricsPusher pusher, byte[] payload)
+    {
+        var exporterField = typeof(MetricsPusher).GetField("_exporter", BindingFlags.NonPublic | BindingFlags.Instance);
+        var exporter = (InProcessMetricsExporter)exporterField!.GetValue(pusher)!;
+
+        var buffer = new Common.RentedBuffer
+        {
+            Data = payload,
+            Length = payload.Length
+        };
+
+        var lockField = typeof(InProcessMetricsExporter).GetField("_lock", BindingFlags.NonPublic | BindingFlags.Instance);
+        var gate = lockField!.GetValue(exporter)!;
+        lock (gate)
+        {
+            typeof(InProcessMetricsExporter).GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, buffer);
+            typeof(InProcessMetricsExporter).GetField("_latestUsed", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, payload.Length);
+        }
+    }
+
+    private static Task InvokePushOnceAsync(MetricsPusher pusher)
+    {
+        var method = typeof(MetricsPusher).GetMethod("PushOnceAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        return (Task)method!.Invoke(pusher, new object[] { CancellationToken.None })!;
     }
 }

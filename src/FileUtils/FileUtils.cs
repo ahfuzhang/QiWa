@@ -67,6 +67,7 @@ namespace FileUtils {
                     }
                     totalRead += read;
                 }
+                rent.Length = totalRead;
                 if (totalRead != length) {
                     return (rent, new Common.Error { Code = 3, Message = $"not read all:{totalRead}/{length}" });
                 }

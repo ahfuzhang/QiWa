@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/Common/Utils.cs" Link="Common/Utils.cs" />
+    <Compile Include="../../src/Common/RentedBuffer.cs" Link="Common/RentedBuffer.cs" />
     <Compile Include="../../src/FileUtils/FileUtils.cs" Link="FileUtils/FileUtils.cs" />
   </ItemGroup>
   <ItemGroup>
