@@ -4,7 +4,6 @@ using System.Buffers;
 
 namespace Common {
     public class Utils {
-
     }
 
     /// <summary>
@@ -19,7 +18,7 @@ namespace Common {
     /// }
     /// ```
     /// </example>
-    public struct ScopeGuard : IDisposable {
+    public ref struct ScopeGuard : IDisposable {
         private Action? _onDispose;
 
         public ScopeGuard(Action onDispose) {

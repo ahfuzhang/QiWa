@@ -8,6 +8,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(CollectCoverage)' == 'true'">
     <IncludeTestAssembly>true</IncludeTestAssembly>
+    <ExcludeByFile>**/Tests/**</ExcludeByFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src/**/*.cs" />

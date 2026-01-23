@@ -62,7 +62,7 @@ public class RentedBuffer {
         byte[] oldData = buffer.Data;
         int oldCapacity = buffer.Data.Length;
 
-        buffer.Extend();
+        buffer.Extend(oldCapacity);
 
         Assert.NotNull(buffer.Data);
         Assert.True(buffer.Data.Length >= oldCapacity * 2);
@@ -175,6 +175,26 @@ public class RentedBuffer {
     }
 
     [Fact]
+    public void Append_AddsDoubleCorrectly() {
+        Common.RentedBuffer buffer = default;
+        buffer.Rent(1);
+
+        double value1 = 123.5;
+        double value2 = -0.25;
+        buffer.Append("a=");
+        buffer.Append(value1);
+        buffer.Append(",b=");
+        buffer.Append(value2);
+
+        var text = System.Text.Encoding.UTF8.GetString(buffer.Bytes());
+        var expected = "a=" + value1.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + ",b=" + value2.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(expected, text);
+
+        buffer.Dispose();
+    }
+
+    [Fact]
     public void Append_AddsBooleanCorrectly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
@@ -182,12 +202,12 @@ public class RentedBuffer {
         buffer.Append(true);
         var span = buffer.Bytes();
         Assert.Equal(4, span.Length);
-        Assert.Equal("True", System.Text.Encoding.UTF8.GetString(span));
+        Assert.Equal("true", System.Text.Encoding.UTF8.GetString(span));
 
         buffer.Append(false);
         span = buffer.Bytes();
         Assert.Equal(9, span.Length);
-        Assert.Equal("TrueFalse", System.Text.Encoding.UTF8.GetString(span));
+        Assert.Equal("truefalse", System.Text.Encoding.UTF8.GetString(span));
         
         buffer.Dispose();
     }
@@ -215,6 +235,81 @@ public class RentedBuffer {
         span = buffer.Bytes();
         Assert.Equal(105, span.Length);
         
+        buffer.Dispose();
+    }
+
+    [Fact]
+    public void AppendAsJsonEscapedString_EscapesSpecialBytes() {
+        Common.RentedBuffer buffer = default;
+        buffer.Rent(4);
+
+        ReadOnlySpan<byte> input = "a\tb\nc\\d\"e"u8;
+        buffer.AppendAsJsonEscapedString(input);
+
+        var text = System.Text.Encoding.UTF8.GetString(buffer.Bytes());
+        Assert.Equal("a\\tb\\nc\\\\d\\\"e", text);
+        Assert.Equal(13, buffer.Length);
+
+        buffer.Dispose();
+    }
+
+    [Fact]
+    public void AppendAsJsonEscapedString_AppendsToExistingData() {
+        Common.RentedBuffer buffer = default;
+        buffer.Rent(8);
+
+        buffer.Append("prefix");
+        buffer.AppendAsJsonEscapedString(ReadOnlySpan<byte>.Empty);
+        buffer.AppendAsJsonEscapedString("x"u8);
+
+        var text = System.Text.Encoding.UTF8.GetString(buffer.Bytes());
+        Assert.Equal("prefixx", text);
+
+        buffer.Dispose();
+    }
+
+    [Fact]
+    public void AppendAsJsonEscapedString_StringEscapes() {
+        Common.RentedBuffer buffer = default;
+        buffer.Rent(4);
+
+        string input = "a\tb\nc\\d\"e";
+        var encoded = System.Text.Json.JsonEncodedText.Encode(input);
+
+        buffer.Append("prefix");
+        int prefixLength = buffer.Length;
+        buffer.AppendAsJsonEscapedString(input);
+
+        var text = System.Text.Encoding.UTF8.GetString(buffer.Bytes());
+        var encodedText = System.Text.Encoding.UTF8.GetString(encoded.EncodedUtf8Bytes);
+        Assert.Equal("prefix" + encodedText, text);
+        Assert.Equal(prefixLength + encoded.EncodedUtf8Bytes.Length, buffer.Length);
+
+        buffer.Dispose();
+    }
+
+    [Fact]
+    public void Clone_CopiesBufferAndLength() {
+        Common.RentedBuffer buffer = default;
+        buffer.Rent(8);
+
+        buffer.Append("clone");
+        var clone = buffer.Clone();
+
+        Assert.NotNull(clone.Data);
+        Assert.Equal(buffer.Length, clone.Length);
+        Assert.False(object.ReferenceEquals(buffer.Data, clone.Data));
+        Assert.Equal(
+            System.Text.Encoding.UTF8.GetString(buffer.Bytes()),
+            System.Text.Encoding.UTF8.GetString(clone.Bytes())
+        );
+
+        clone.Append((byte)'x');
+        Assert.NotEqual(buffer.Length, clone.Length);
+        Assert.Equal("clone", System.Text.Encoding.UTF8.GetString(buffer.Bytes()));
+        Assert.Equal("clonex", System.Text.Encoding.UTF8.GetString(clone.Bytes()));
+
+        clone.Dispose();
         buffer.Dispose();
     }
 
@@ -285,7 +380,7 @@ public class RentedBuffer {
         buffer.Append("A", "", "B");
         span = buffer.Bytes();
         Assert.Equal(6, span.Length);
-        Assert.Equal("TrueAB", System.Text.Encoding.UTF8.GetString(span));
+        Assert.Equal("trueAB", System.Text.Encoding.UTF8.GetString(span));
         
         buffer.Dispose();
     }

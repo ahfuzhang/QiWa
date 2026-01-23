@@ -1,14 +1,16 @@
 
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Buffers.Text;
 
 namespace Common {
-        public struct RentedBuffer : IDisposable {
+    public struct RentedBuffer : IDisposable {
         public byte[]? Data;
         public System.Int32 Length;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RentedBuffer(System.Int32 length){
+        public RentedBuffer(System.Int32 length) {
             Rent(length);
         }
 
@@ -38,35 +40,22 @@ namespace Common {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> Bytes() {
             if (Data == null || Length == 0) {
-                return Span<byte>.Empty;
+                return [];
             }
             return Data.AsSpan(0, Length);
         }
 
-        //const int CodeOfNotRentYet = 255;
         const int CodeOfFormatFail = 254;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Error Extend() {
-            /*
-            prompt:
-            * 目标: 提供一个函数，对存储空间翻倍
-            * 过程:
-              - 根据 Data 的容量，rent 容量翻倍的一块内存
-              - 根据 Length, 把 Data 中的数据复制过去
-              - 交换 Data
-              -  return 旧的内存块
-            */
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-            byte[] newData = ArrayPool<byte>.Shared.Rent(Data!.Length*2);
-            if (Length > 0) {
-                Array.Copy(Data, newData, Length);
+        public void Extend(int needed) {
+            if (Length + needed <= Data!.Length) {
+                return;
             }
+            byte[] newData = ArrayPool<byte>.Shared.Rent(Data!.Length * 2+needed);
+            Array.Copy(Data, newData, Length);
             ArrayPool<byte>.Shared.Return(Data);
             Data = newData;
-            return default(Error);
         }
 
         /// <summary>
@@ -76,87 +65,58 @@ namespace Common {
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(params string[] arr) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-
             foreach (var s in arr) {
                 if (string.IsNullOrEmpty(s)) {
                     continue;
                 }
-
                 int byteCount = System.Text.Encoding.UTF8.GetByteCount(s);
-                while (Length + byteCount > Data!.Length) {
-                    Extend();
-                }
-
-                int bytesWritten = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, Data, Length);
+                Extend(byteCount);
+                int bytesWritten = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, Data!, Length);
                 Length += bytesWritten;
             }
             return default(Error);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]  
-        public Error Append(string s){
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Error Append(string s) {
             if (string.IsNullOrEmpty(s)) {
                 return default(Error);
             }
             int byteCount = System.Text.Encoding.UTF8.GetByteCount(s);
-            while (Length + byteCount > Data!.Length) {
-                Extend();
-            }
-            int bytesWritten = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, Data, Length);
+            Extend(byteCount);
+            int bytesWritten = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, Data!, Length);
             Length += bytesWritten;
             return default(Error);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(byte c) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-
-            while (Length + 1 > Data!.Length) {
-                Extend();
-            }
-
-            Data[Length] = c;
+            Extend(1);
+            Data![Length] = c;
             Length++;
             return default(Error);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(ReadOnlySpan<byte> s) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
             if (s.IsEmpty) {
                 return default(Error);
             }
-            while (Length + s.Length > Data!.Length) {
-                Extend();
-            }
-
+            Extend(s.Length);
             s.CopyTo(Data.AsSpan(Length));
             Length += s.Length;
             return default(Error);
         }
 
+        const int maxIntegerLength = 20;
+        const int maxBoolLength = 5;
+        const int maxUtcDatetimeLength = 28;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(long value) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-            const int maxByteCount = 20;
-            while (Data!.Length - Length < maxByteCount) {
-                Extend();
-            }
-
+            Extend(maxIntegerLength);
             if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten)) {
-                return new Error{Code=CodeOfFormatFail, Message=Utf8FormatterFailedMessage};
+                return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
             }
             Length += bytesWritten;
             return default(Error);
@@ -164,16 +124,22 @@ namespace Common {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(System.UInt64 value) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-            const int maxByteCount = 20;
-            while (Data!.Length - Length < maxByteCount) {
-                Extend();
-            }
-
+            Extend(maxIntegerLength);
             if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten)) {
-                return new Error{Code=CodeOfFormatFail, Message=Utf8FormatterFailedMessage};
+                return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
+            }
+            Length += bytesWritten;
+            return default(Error);
+        }
+
+        const int maxFloat64Length = 64;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Error Append(double value) {
+            Extend(maxFloat64Length);
+            if (!Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten))
+            {
+                return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
             }
             Length += bytesWritten;
             return default(Error);
@@ -181,16 +147,9 @@ namespace Common {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(bool value) {
-            // if (Data == null) {
-            //     return new Error{Code=CodeOfNotRentYet, Message=BufferNotRentedMessage};
-            // }
-            const int maxByteCount = 5;
-            while (Data!.Length - Length < maxByteCount) {
-                Extend();
-            }
-
-            if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten)) {
-                return new Error{Code=CodeOfFormatFail, Message=Utf8FormatterFailedMessage};
+            Extend(maxBoolLength);
+            if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten, new StandardFormat('l'))) {
+                return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
             }
             Length += bytesWritten;
             return default(Error);
@@ -200,16 +159,12 @@ namespace Common {
         public Error AppendUtcDatetime(DateTime dtm) {
             if (dtm.Kind == DateTimeKind.Local) {
                 dtm = dtm.ToUniversalTime();
-            } else if (dtm.Kind == DateTimeKind.Unspecified) {
+            }
+            else if (dtm.Kind == DateTimeKind.Unspecified) {
                 dtm = DateTime.SpecifyKind(dtm, DateTimeKind.Utc);
             }
-
-            const int bytesNeeded = 28;
-            while (Data!.Length - Length < bytesNeeded) {
-                Extend();
-            }
-
-            var dst = Data.AsSpan(Length, bytesNeeded);
+            Extend(maxUtcDatetimeLength);
+            var dst = Data.AsSpan(Length, maxUtcDatetimeLength);
 
             int year = dtm.Year;
             int month = dtm.Month;
@@ -234,7 +189,7 @@ namespace Common {
             Write7(fraction, dst, 20);
             dst[27] = (byte)'Z';
 
-            Length += bytesNeeded;
+            Length += maxUtcDatetimeLength;
             return default(Error);
 
             static void Write2(int value, Span<byte> destination, int offset) {
@@ -266,6 +221,55 @@ namespace Common {
                 destination[offset + 1] = (byte)('0' + (value % 10));
                 value /= 10;
                 destination[offset] = (byte)('0' + (value % 10));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly RentedBuffer Clone() {
+            RentedBuffer cloned = new(Data!.Length);
+            Array.Copy(Data, cloned.Data!, Length);
+            cloned.Length = Length;
+            return cloned;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendAsJsonEscapedString(string s) {
+            JsonEncodedText encoded = JsonEncodedText.Encode(s);
+            Extend(encoded.EncodedUtf8Bytes.Length);
+            Append(encoded.EncodedUtf8Bytes);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendAsJsonEscapedString(ReadOnlySpan<byte> s) {
+            int needed = s.Length * 2;
+            Extend(needed);
+            foreach (var b in s) {
+                switch (b) {
+                    case (byte)'\t':
+                        Data![Length] = (byte)'\\';
+                        Data[Length + 1] = (byte)'t';
+                        Length += 2;
+                        break;
+                    case (byte)'\n':
+                        Data![Length] = (byte)'\\';
+                        Data[Length + 1] = (byte)'n';
+                        Length += 2;
+                        break;
+                    case (byte)'\\':
+                        Data![Length] = (byte)'\\';
+                        Data[Length + 1] = (byte)'\\';
+                        Length += 2;
+                        break;
+                    case (byte)'"':
+                        Data![Length] = (byte)'\\';
+                        Data[Length + 1] = (byte)'"';
+                        Length += 2;
+                        break;
+                    default:
+                        Data![Length] = b;
+                        Length++;
+                        break;
+                }
             }
         }
     }
