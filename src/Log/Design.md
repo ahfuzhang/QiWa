@@ -171,3 +171,12 @@ public class TaskLogger{
   - _line: 日志的行号
 
 
+# todo:
+
+* _file 太长了，进行截断
+  - `"_file":"/Users/ahfu/code/github.com/ahfuzhang/QiWa/Tests/Log/LoggerTests.cs"`
+* 日志的缓冲区长度可以配置  ok
+* channel 的阻塞问题   ok
+* 锁的问题
+* 线程退出的时候，应该把 buffer 中剩余的日志进行输出  ok
+* channel 中 drop 的时候， rented buffer 应该要释放  ok

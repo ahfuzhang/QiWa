@@ -14,11 +14,9 @@ using Xunit;
 
 namespace Tests.MetricsPush;
 
-public class MetricsPusherUnitTests
-{
+public class MetricsPusherUnitTests {
     [Fact]
-    public async Task Constructor_ArgValidation()
-    {
+    public async Task Constructor_ArgValidation() {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => new MetricsPusher(0, "u", null!, builder));
@@ -27,8 +25,7 @@ public class MetricsPusherUnitTests
     }
 
     [Fact]
-    public async Task PushOnce_Successful_IncrementsTelemetry()
-    {
+    public async Task PushOnce_Successful_IncrementsTelemetry() {
         // Arrange
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(0));
@@ -41,7 +38,7 @@ public class MetricsPusherUnitTests
             )
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK))
             .Verifiable();
-            
+
         var httpClient = new HttpClient(handler.Object);
         var tags = new Dictionary<string, string>();
 
@@ -55,8 +52,8 @@ public class MetricsPusherUnitTests
         handler.Protected().Verify(
             "SendAsync",
             Times.AtLeastOnce(),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Post && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Post &&
                 req.RequestUri == new Uri("http://test.com") &&
                 req.Content != null &&
                 req.Content.Headers.ContentEncoding.Contains("zstd")
@@ -65,28 +62,24 @@ public class MetricsPusherUnitTests
         );
     }
 
-    private static void SeedExporter(MetricsPusher pusher, byte[] payload)
-    {
+    private static void SeedExporter(MetricsPusher pusher, byte[] payload) {
         var exporterField = typeof(MetricsPusher).GetField("_exporter", BindingFlags.NonPublic | BindingFlags.Instance);
         var exporter = (InProcessMetricsExporter)exporterField!.GetValue(pusher)!;
 
-        var buffer = new Common.RentedBuffer
-        {
+        var buffer = new Common.RentedBuffer {
             Data = payload,
             Length = payload.Length
         };
 
         var lockField = typeof(InProcessMetricsExporter).GetField("_lock", BindingFlags.NonPublic | BindingFlags.Instance);
         var gate = lockField!.GetValue(exporter)!;
-        lock (gate)
-        {
+        lock (gate) {
             typeof(InProcessMetricsExporter).GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, buffer);
             typeof(InProcessMetricsExporter).GetField("_latestUsed", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, payload.Length);
         }
     }
 
-    private static Task InvokePushOnceAsync(MetricsPusher pusher)
-    {
+    private static Task InvokePushOnceAsync(MetricsPusher pusher) {
         var method = typeof(MetricsPusher).GetMethod("PushOnceAsync", BindingFlags.NonPublic | BindingFlags.Instance);
         return (Task)method!.Invoke(pusher, new object[] { CancellationToken.None })!;
     }

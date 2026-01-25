@@ -81,7 +81,7 @@ public class RentedBuffer {
     public void Append_AddsStringsCorrectly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
-        
+
         // Append simple string
         buffer.Append("Hello");
         var span = buffer.Bytes();
@@ -99,14 +99,14 @@ public class RentedBuffer {
         // Wait, Rent(10) means capacity >= 10. 
         // 13 > 10, so it should have extended already.
         // Let's verify capacity.
-        Assert.True(buffer.Data.Length >= 13);
+        Assert.True(buffer.Data!.Length >= 13);
 
         string longString = new string('a', 100);
         buffer.Append(longString);
         span = buffer.Bytes();
         Assert.Equal(113, span.Length);
         Assert.EndsWith(longString, System.Text.Encoding.UTF8.GetString(span));
-        
+
         buffer.Dispose();
     }
 
@@ -114,7 +114,7 @@ public class RentedBuffer {
     public void Append_AddsByteCorrectly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(1);
-        
+
         buffer.Append((byte)'A');
         var span = buffer.Bytes();
         Assert.Equal(1, span.Length);
@@ -126,7 +126,7 @@ public class RentedBuffer {
         Assert.Equal(2, span.Length);
         Assert.Equal((byte)'A', span[0]);
         Assert.Equal((byte)'B', span[1]);
-        
+
         buffer.Dispose();
     }
 
@@ -134,7 +134,7 @@ public class RentedBuffer {
     public void Append_AddsInt64Correctly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
-        
+
         long val1 = 1234567890;
         buffer.Append(val1);
         var span = buffer.Bytes();
@@ -147,7 +147,7 @@ public class RentedBuffer {
         span = buffer.Bytes();
         Assert.Equal(12, span.Length);
         Assert.Equal("1234567890-1", System.Text.Encoding.UTF8.GetString(span));
-        
+
         buffer.Dispose();
     }
 
@@ -155,7 +155,7 @@ public class RentedBuffer {
     public void Append_AddsUInt64Correctly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
-        
+
         ulong val1 = 1234567890;
         buffer.Append(val1);
         var span = buffer.Bytes();
@@ -164,13 +164,13 @@ public class RentedBuffer {
 
         // Max value
         ulong val2 = ulong.MaxValue;
-        buffer = default; 
+        buffer = default;
         buffer.Rent(20);
         buffer.Append(val2);
         span = buffer.Bytes();
         Assert.Equal(20, span.Length);
         Assert.Equal(ulong.MaxValue.ToString(), System.Text.Encoding.UTF8.GetString(span));
-        
+
         buffer.Dispose();
     }
 
@@ -198,7 +198,7 @@ public class RentedBuffer {
     public void Append_AddsBooleanCorrectly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
-        
+
         buffer.Append(true);
         var span = buffer.Bytes();
         Assert.Equal(4, span.Length);
@@ -208,7 +208,7 @@ public class RentedBuffer {
         span = buffer.Bytes();
         Assert.Equal(9, span.Length);
         Assert.Equal("truefalse", System.Text.Encoding.UTF8.GetString(span));
-        
+
         buffer.Dispose();
     }
 
@@ -216,7 +216,7 @@ public class RentedBuffer {
     public void Append_AddsReadOnlySpanCorrectly() {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
-        
+
         ReadOnlySpan<byte> data = "Hello"u8;
         buffer.Append(data);
         var span = buffer.Bytes();
@@ -230,11 +230,11 @@ public class RentedBuffer {
 
         // Large span triggering extend
         byte[] largeData = new byte[100];
-        for(int i=0; i<100; i++) largeData[i] = (byte)'x';
+        for (int i = 0; i < 100; i++) largeData[i] = (byte)'x';
         buffer.Append((ReadOnlySpan<byte>)largeData);
         span = buffer.Bytes();
         Assert.Equal(105, span.Length);
-        
+
         buffer.Dispose();
     }
 
@@ -367,10 +367,10 @@ public class RentedBuffer {
         buffer.Rent(1); // Small buffer to force extension for bool
 
         // Test Append(bool) extension
-        buffer.Append(true); 
+        buffer.Append(true);
         var span = buffer.Bytes();
         Assert.Equal(4, span.Length);
-        Assert.True(buffer.Data.Length >= 5);
+        Assert.True(buffer.Data!.Length >= 5);
 
         // Test Append(string) with empty string
         buffer.Append("");
@@ -381,21 +381,21 @@ public class RentedBuffer {
         span = buffer.Bytes();
         Assert.Equal(6, span.Length);
         Assert.Equal("trueAB", System.Text.Encoding.UTF8.GetString(span));
-        
+
         buffer.Dispose();
     }
 
     [Fact]
     public void Append_ForceExtension() {
         Common.RentedBuffer buffer = default;
-        buffer.Rent(1); 
+        buffer.Rent(1);
         // ArrayPool might return more than 1. Fill it up.
-        int initialCapacity = buffer.Data.Length;
+        int initialCapacity = buffer.Data!.Length;
         for (int i = 0; i < initialCapacity; i++) {
             buffer.Append((byte)'x');
         }
         Assert.Equal(initialCapacity, buffer.Length);
-        
+
         // Now next Append(byte) must trigger Extend
         buffer.Append((byte)'y');
         Assert.True(buffer.Data.Length > initialCapacity);
@@ -405,8 +405,8 @@ public class RentedBuffer {
         int currentCapacity = buffer.Data.Length;
         int remaining = currentCapacity - buffer.Length;
         // Append small strings to fill remaining
-        for(int i=0; i<remaining; i++) {
-             buffer.Append((byte)'z');
+        for (int i = 0; i < remaining; i++) {
+            buffer.Append((byte)'z');
         }
 
         // Now Append(params string[]) triggering extension
@@ -418,16 +418,16 @@ public class RentedBuffer {
         int maxByteCountBool = 5;
         currentCapacity = buffer.Data.Length;
         int targetLength = currentCapacity - maxByteCountBool + 1; // force extend
-        
+
         // Use byte append to fill up
-        while(buffer.Length < targetLength) {
-             buffer.Append((byte)'b');
+        while (buffer.Length < targetLength) {
+            buffer.Append((byte)'b');
         }
-        
+
         int lengthBeforeBool = buffer.Length;
         // Verify we are in the zone where Extend is needed: (Capacity - Length < 5)
         Assert.True(buffer.Data.Length - buffer.Length < maxByteCountBool);
-        
+
         buffer.Append(true); // Should trigger Extend
         Assert.True(buffer.Data.Length > currentCapacity);
 

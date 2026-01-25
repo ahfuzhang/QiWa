@@ -31,9 +31,9 @@ namespace CompressTests {
             var dstChecks = new byte[boundChecks];
             compressorWithChecksum.TryWrap(srcSpan, dstChecks, out int writtenChecks);
             var corruptBody = dstChecks.Take(writtenChecks).ToArray();
-            
+
             // Corrupt the body (middle byte, to avoid header damage)
-            if(corruptBody.Length > 10) corruptBody[corruptBody.Length / 2] ^= 0xFF;
+            if (corruptBody.Length > 10) corruptBody[corruptBody.Length / 2] ^= 0xFF;
 
             var testCases = new List<TestCase> {
                 new TestCase {
@@ -74,7 +74,7 @@ namespace CompressTests {
                     ExpectUncompressError = true,
                     // If GetDecompressedSize fails, it's code 3. If it succeeds but Unwrap fails, code 4.
                     // Truncation usually causes Code 3 if frame structure is broken.
-                    ExpectedErrorCode = 3, 
+                    ExpectedErrorCode = 3,
                     ExpectedErrorMsgContains = "GetDecompressedSize fail"
                 },
                 new TestCase {
@@ -89,43 +89,43 @@ namespace CompressTests {
 
             // Prepare dynamic test data for placeholders
             var indexTrunc = testCases.FindIndex(t => t.Name == "Truncated Body");
-            if(indexTrunc >= 0) {
-                 var valid = ZstdCompressor.Compress(System.Text.Encoding.UTF8.GetBytes("Hello World with enough length to have body")).Item1;
-                 var validBytes = valid.Bytes().ToArray();
-                 valid.Dispose();
-                 // Truncate last byte
-                 if (validBytes.Length > 0) {
-                     var trunc = validBytes.Take(validBytes.Length - 1).ToArray();
-                     var tc = testCases[indexTrunc];
-                     tc.Input = trunc;
-                     testCases[indexTrunc] = tc;
-                 }
+            if (indexTrunc >= 0) {
+                var valid = ZstdCompressor.Compress(System.Text.Encoding.UTF8.GetBytes("Hello World with enough length to have body")).Item1;
+                var validBytes = valid.Bytes().ToArray();
+                valid.Dispose();
+                // Truncate last byte
+                if (validBytes.Length > 0) {
+                    var trunc = validBytes.Take(validBytes.Length - 1).ToArray();
+                    var tc = testCases[indexTrunc];
+                    tc.Input = trunc;
+                    testCases[indexTrunc] = tc;
+                }
             }
 
             var indexLying = testCases.FindIndex(t => t.Name == "Lying Header (Content Size < Actual)");
-            if(indexLying >= 0) {
-                 // Create valid frame with known size (e.g. 100 'A's)
-                 byte[] original = new byte[100];
-                 for(int i=0;i<100;i++) original[i] = 65;
-                 
-                 var valid = ZstdCompressor.Compress(original).Item1;
-                 var validBytes = valid.Bytes().ToArray();
-                 valid.Dispose();
-                 
-                 // Heuristic: Search for the size byte (100 = 0x64) in the header (first 20 bytes) and change it to 1.
-                 // Zstd stores Frame_Content_Size.
-                 // For 100 bytes, it fits in 1 byte or 2 bytes depending on encoding.
-                 // If we find 0x64, change to 0x01.
-                 for(int i=4; i< Math.Min(validBytes.Length, 20); i++) {
-                     if(validBytes[i] == 100) {
-                         validBytes[i] = 1; // Claim size is 1
-                         break;
-                     }
-                 }
-                 
-                 var tc = testCases[indexLying];
-                 tc.Input = validBytes;
-                 testCases[indexLying] = tc;
+            if (indexLying >= 0) {
+                // Create valid frame with known size (e.g. 100 'A's)
+                byte[] original = new byte[100];
+                for (int i = 0; i < 100; i++) original[i] = 65;
+
+                var valid = ZstdCompressor.Compress(original).Item1;
+                var validBytes = valid.Bytes().ToArray();
+                valid.Dispose();
+
+                // Heuristic: Search for the size byte (100 = 0x64) in the header (first 20 bytes) and change it to 1.
+                // Zstd stores Frame_Content_Size.
+                // For 100 bytes, it fits in 1 byte or 2 bytes depending on encoding.
+                // If we find 0x64, change to 0x01.
+                for (int i = 4; i < Math.Min(validBytes.Length, 20); i++) {
+                    if (validBytes[i] == 100) {
+                        validBytes[i] = 1; // Claim size is 1
+                        break;
+                    }
+                }
+
+                var tc = testCases[indexLying];
+                tc.Input = validBytes;
+                testCases[indexLying] = tc;
             }
 
             foreach (var tc in testCases) {
@@ -151,7 +151,7 @@ namespace CompressTests {
                         var (compressed, errComp) = ZstdCompressor.Compress(data);
                         if (errComp.Err()) {
                             errors.Add($"Thread {i} Iter {j} Compress Error: {errComp.Message}");
-                             compressed.Dispose();
+                            compressed.Dispose();
                             continue;
                         }
 
@@ -159,19 +159,21 @@ namespace CompressTests {
                         var (uncompressed, errUn) = ZstdCompressor.Uncompress(compressed.Bytes());
                         if (errUn.Err()) {
                             errors.Add($"Thread {i} Iter {j} Uncompress Error: {errUn.Message}");
-                        } else {
+                        }
+                        else {
                             // 4. Verify
-                             var resultBytes = uncompressed.Bytes().ToArray();
-                             if (!data.SequenceEqual(resultBytes)) {
-                                 errors.Add($"Thread {i} Iter {j} Data Mismatch");
-                             }
+                            var resultBytes = uncompressed.Bytes().ToArray();
+                            if (!data.SequenceEqual(resultBytes)) {
+                                errors.Add($"Thread {i} Iter {j} Data Mismatch");
+                            }
                         }
 
                         compressed.Dispose();
                         uncompressed.Dispose();
 
-                    } catch (Exception ex) {
-                         errors.Add($"Thread {i} Iter {j} Exception: {ex}");
+                    }
+                    catch (Exception ex) {
+                        errors.Add($"Thread {i} Iter {j} Exception: {ex}");
                     }
                 }
             });
@@ -187,14 +189,15 @@ namespace CompressTests {
                 originalData = tc.Input;
                 // Test Compress
                 var (compressed, err) = ZstdCompressor.Compress(tc.Input);
-                
+
                 if (tc.ExpectCompressError) {
                     Assert.True(err.Err(), $"TestCase '{tc.Name}': Expected compression error but got none.");
                     if (tc.ExpectedErrorCode != 0) Assert.Equal(tc.ExpectedErrorCode, err.Code);
                     if (!string.IsNullOrEmpty(tc.ExpectedErrorMsgContains)) Assert.Contains(tc.ExpectedErrorMsgContains, err.Message);
                     compressed.Dispose();
                     return; // Done
-                } else {
+                }
+                else {
                     Assert.False(err.Err(), $"TestCase '{tc.Name}': Unexpected compression error: {err.Message}");
                     // Zstd empty input produces a frame (9 bytes usually), so length > 0
                     Assert.True(compressed.Length > 0 || (tc.Input.Length == 0 && compressed.Length >= 0));
@@ -202,7 +205,8 @@ namespace CompressTests {
                     Assert.True(compressedData.Length > 0);
                     compressed.Dispose();
                 }
-            } else {
+            }
+            else {
                 compressedData = tc.Input;
             }
 
@@ -213,9 +217,10 @@ namespace CompressTests {
                 Assert.True(errUn.Err(), $"TestCase '{tc.Name}': Expected uncompression error but got none.");
                 if (tc.ExpectedErrorCode != 0) Assert.Equal(tc.ExpectedErrorCode, errUn.Code);
                 if (!string.IsNullOrEmpty(tc.ExpectedErrorMsgContains)) Assert.Contains(tc.ExpectedErrorMsgContains, errUn.Message);
-            } else {
+            }
+            else {
                 Assert.False(errUn.Err(), $"TestCase '{tc.Name}': Unexpected uncompression error: {errUn.Message}");
-                
+
                 // If we started with uncompressed data, verify roundtrip equality
                 if (!tc.IsCompressedInput) {
                     var resultBytes = uncompressed.Bytes().ToArray();

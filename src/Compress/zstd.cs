@@ -38,8 +38,9 @@ namespace Compress {
             ulong size;
             try {
                 size = ZstdSharp.Decompressor.GetDecompressedSize(compressed);
-            } catch (System.Exception ex) {
-                 return (default(Common.RentedBuffer), new Common.Error { Code = 3, Message = $"GetDecompressedSize fail: {ex.Message}" });
+            }
+            catch (System.Exception ex) {
+                return (default(Common.RentedBuffer), new Common.Error { Code = 3, Message = $"GetDecompressedSize fail: {ex.Message}" });
             }
             Common.RentedBuffer dst = default;
             dst.Rent((int)size);
@@ -47,7 +48,8 @@ namespace Compress {
             int written;
             try {
                 success = decompressor.TryUnwrap(compressed, dst.Data.AsSpan(), out written);
-            } catch (System.Exception ex) {
+            }
+            catch (System.Exception ex) {
                 dst.Dispose();
                 return (default(Common.RentedBuffer), new Common.Error { Code = 4, Message = $"decompressor.TryUnwrap fail: {ex.Message}" });
             }

@@ -6,11 +6,9 @@ using Xunit;
 
 namespace Tests.MetricsPush;
 
-public class Utf8BufferWriterTests
-{
+public class Utf8BufferWriterTests {
     [Fact]
-    public void AppendString_ValidString_WritesUtf8Bytes()
-    {
+    public void AppendString_ValidString_WritesUtf8Bytes() {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
         string input = "Hello, World!";
@@ -23,8 +21,7 @@ public class Utf8BufferWriterTests
     }
 
     [Fact]
-    public void AppendString_NullOrEmpty_WritesNothing()
-    {
+    public void AppendString_NullOrEmpty_WritesNothing() {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
 
@@ -37,8 +34,7 @@ public class Utf8BufferWriterTests
     }
 
     [Fact]
-    public void AppendString_UnicodeBuffer_WritesCorrectUtf8()
-    {
+    public void AppendString_UnicodeBuffer_WritesCorrectUtf8() {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
         string input = "你好，世界！🌟";
@@ -51,9 +47,8 @@ public class Utf8BufferWriterTests
     }
 
     [Fact]
-    public void AppendBytes_ValidBytes_WritesBytes()
-    {
-         // Arrange
+    public void AppendBytes_ValidBytes_WritesBytes() {
+        // Arrange
         var writer = new ArrayBufferWriter<byte>();
         byte[] input = new byte[] { 1, 2, 3, 4, 5 };
 
@@ -65,8 +60,7 @@ public class Utf8BufferWriterTests
     }
 
     [Fact]
-    public void AppendBytes_EmptyBytes_WritesNothing()
-    {
+    public void AppendBytes_EmptyBytes_WritesNothing() {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
 
@@ -78,9 +72,8 @@ public class Utf8BufferWriterTests
     }
 
     [Fact]
-    public void AppendByte_ValidByte_WritesByte()
-    {
-         // Arrange
+    public void AppendByte_ValidByte_WritesByte() {
+        // Arrange
         var writer = new ArrayBufferWriter<byte>();
 
         // Act

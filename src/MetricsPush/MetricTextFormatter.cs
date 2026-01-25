@@ -7,31 +7,23 @@ using OpenTelemetry.Metrics;
 
 namespace MetricsPush;
 
-internal static class MetricTextFormatter
-{
-    public static void Format(IBufferWriter<byte> writer, IReadOnlyList<Metric> metrics, IReadOnlyDictionary<string, string> extraLabels)
-    {
-        foreach (var metric in metrics)
-        {
+internal static class MetricTextFormatter {
+    public static void Format(IBufferWriter<byte> writer, IReadOnlyList<Metric> metrics, IReadOnlyDictionary<string, string> extraLabels) {
+        foreach (var metric in metrics) {
             string metricName = SanitizeMetricName(metric.Name);
-            if (string.IsNullOrEmpty(metricName))
-            {
+            if (string.IsNullOrEmpty(metricName)) {
                 continue;
             }
 
-            switch (metric.MetricType)
-            {
+            switch (metric.MetricType) {
                 case MetricType.Histogram:
-                    foreach (var point in metric.GetMetricPoints())
-                    {
+                    foreach (var point in metric.GetMetricPoints()) {
                         AppendHistogramLines(writer, metricName, extraLabels, point);
                     }
                     break;
                 default:
-                    foreach (var point in metric.GetMetricPoints())
-                    {
-                        if (!TryGetValue(metric, point, out bool isDouble, out long longValue, out double doubleValue))
-                        {
+                    foreach (var point in metric.GetMetricPoints()) {
+                        if (!TryGetValue(metric, point, out bool isDouble, out long longValue, out double doubleValue)) {
                             continue;
                         }
 
@@ -49,33 +41,27 @@ internal static class MetricTextFormatter
         in MetricPoint point,
         bool isDouble,
         long longValue,
-        double doubleValue)
-    {
+        double doubleValue) {
         Utf8BufferWriter.AppendString(writer, name);
 
         AppendLabels(writer, extraLabels, point, null, null);
 
         Utf8BufferWriter.AppendByte(writer, (byte)' ');
-        if (isDouble)
-        {
+        if (isDouble) {
             AppendDouble(writer, doubleValue);
         }
-        else
-        {
+        else {
             AppendLong(writer, longValue);
         }
         Utf8BufferWriter.AppendByte(writer, (byte)'\n');
     }
 
-    private static void AppendLabel(IBufferWriter<byte> writer, string key, string value, ref bool wroteAny)
-    {
-        if (string.IsNullOrEmpty(key))
-        {
+    private static void AppendLabel(IBufferWriter<byte> writer, string key, string value, ref bool wroteAny) {
+        if (string.IsNullOrEmpty(key)) {
             return;
         }
 
-        if (wroteAny)
-        {
+        if (wroteAny) {
             Utf8BufferWriter.AppendByte(writer, (byte)',');
         }
 
@@ -92,38 +78,31 @@ internal static class MetricTextFormatter
         IReadOnlyDictionary<string, string> extraLabels,
         in MetricPoint point,
         string? additionalKey,
-        string? additionalValue)
-    {
+        string? additionalValue) {
         bool hasLabels = extraLabels.Count > 0 || point.Tags.Count > 0 || !string.IsNullOrEmpty(additionalKey);
-        if (!hasLabels)
-        {
+        if (!hasLabels) {
             return;
         }
 
         Utf8BufferWriter.AppendByte(writer, (byte)'{');
         bool wroteAny = false;
 
-        foreach (var label in extraLabels)
-        {
+        foreach (var label in extraLabels) {
             string key = SanitizeLabelName(label.Key);
-            if (string.IsNullOrEmpty(key))
-            {
+            if (string.IsNullOrEmpty(key)) {
                 continue;
             }
 
             AppendLabel(writer, key, label.Value, ref wroteAny);
         }
 
-        foreach (var tag in point.Tags)
-        {
-            if (string.IsNullOrEmpty(tag.Key))
-            {
+        foreach (var tag in point.Tags) {
+            if (string.IsNullOrEmpty(tag.Key)) {
                 continue;
             }
 
             string key = SanitizeLabelName(tag.Key);
-            if (string.IsNullOrEmpty(key))
-            {
+            if (string.IsNullOrEmpty(key)) {
                 continue;
             }
 
@@ -131,11 +110,9 @@ internal static class MetricTextFormatter
             AppendLabel(writer, key, value, ref wroteAny);
         }
 
-        if (!string.IsNullOrEmpty(additionalKey))
-        {
+        if (!string.IsNullOrEmpty(additionalKey)) {
             string key = SanitizeLabelName(additionalKey);
-            if (!string.IsNullOrEmpty(key))
-            {
+            if (!string.IsNullOrEmpty(key)) {
                 AppendLabel(writer, key, additionalValue ?? string.Empty, ref wroteAny);
             }
         }
@@ -143,22 +120,18 @@ internal static class MetricTextFormatter
         Utf8BufferWriter.AppendByte(writer, (byte)'}');
     }
 
-    private static void AppendLong(IBufferWriter<byte> writer, long value)
-    {
+    private static void AppendLong(IBufferWriter<byte> writer, long value) {
         Span<byte> span = writer.GetSpan(32);
-        if (!Utf8Formatter.TryFormat(value, span, out int written))
-        {
+        if (!Utf8Formatter.TryFormat(value, span, out int written)) {
             Utf8BufferWriter.AppendString(writer, value.ToString(CultureInfo.InvariantCulture));
             return;
         }
         writer.Advance(written);
     }
 
-    private static void AppendDouble(IBufferWriter<byte> writer, double value)
-    {
+    private static void AppendDouble(IBufferWriter<byte> writer, double value) {
         Span<byte> span = writer.GetSpan(64);
-        if (!Utf8Formatter.TryFormat(value, span, out int written))
-        {
+        if (!Utf8Formatter.TryFormat(value, span, out int written)) {
             Utf8BufferWriter.AppendString(writer, value.ToString(CultureInfo.InvariantCulture));
             return;
         }
@@ -169,11 +142,9 @@ internal static class MetricTextFormatter
         IBufferWriter<byte> writer,
         string name,
         IReadOnlyDictionary<string, string> extraLabels,
-        in MetricPoint point)
-    {
+        in MetricPoint point) {
         long cumulative = 0;
-        foreach (var bucket in point.GetHistogramBuckets())
-        {
+        foreach (var bucket in point.GetHistogramBuckets()) {
             cumulative += bucket.BucketCount;
             AppendHistogramBucketLine(writer, name, extraLabels, point, bucket.ExplicitBound, cumulative);
         }
@@ -188,8 +159,7 @@ internal static class MetricTextFormatter
         IReadOnlyDictionary<string, string> extraLabels,
         in MetricPoint point,
         double bound,
-        long cumulativeCount)
-    {
+        long cumulativeCount) {
         Utf8BufferWriter.AppendString(writer, name);
         Utf8BufferWriter.AppendString(writer, "_bucket");
 
@@ -208,10 +178,8 @@ internal static class MetricTextFormatter
         in MetricPoint point,
         out bool isDouble,
         out long longValue,
-        out double doubleValue)
-    {
-        switch (metric.MetricType)
-        {
+        out double doubleValue) {
+        switch (metric.MetricType) {
             case MetricType.LongSum:
             case MetricType.LongSumNonMonotonic:
                 longValue = point.GetSumLong();
@@ -242,49 +210,39 @@ internal static class MetricTextFormatter
         }
     }
 
-    private static string SanitizeMetricName(string name)
-    {
+    private static string SanitizeMetricName(string name) {
         return SanitizeName(name, allowColon: true, allowDot: false);
     }
 
-    private static string SanitizeLabelName(string name)
-    {
+    private static string SanitizeLabelName(string name) {
         return SanitizeName(name, allowColon: false, allowDot: false);
     }
 
-    private static string SanitizeName(string name, bool allowColon, bool allowDot)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
+    private static string SanitizeName(string name, bool allowColon, bool allowDot) {
+        if (string.IsNullOrEmpty(name)) {
             return string.Empty;
         }
 
         bool needsSanitize = !IsValidFirstChar(name[0], allowColon, allowDot);
-        if (!needsSanitize)
-        {
-            for (int i = 0; i < name.Length; i++)
-            {
-                if (!IsValidNameChar(name[i], allowColon, allowDot))
-                {
+        if (!needsSanitize) {
+            for (int i = 0; i < name.Length; i++) {
+                if (!IsValidNameChar(name[i], allowColon, allowDot)) {
                     needsSanitize = true;
                     break;
                 }
             }
         }
 
-        if (!needsSanitize)
-        {
+        if (!needsSanitize) {
             return name;
         }
 
         Span<char> buffer = name.Length <= 256 ? stackalloc char[name.Length + 1] : new char[name.Length + 1];
         int index = 0;
 
-        for (int i = 0; i < name.Length; i++)
-        {
+        for (int i = 0; i < name.Length; i++) {
             char normalized = IsValidNameChar(name[i], allowColon, allowDot) ? name[i] : '_';
-            if (index == 0 && !IsValidFirstChar(normalized, allowColon, allowDot))
-            {
+            if (index == 0 && !IsValidFirstChar(normalized, allowColon, allowDot)) {
                 buffer[index++] = '_';
             }
 
@@ -294,24 +252,20 @@ internal static class MetricTextFormatter
         return new string(buffer[..index]);
     }
 
-    private static bool IsValidFirstChar(char value, bool allowColon, bool allowDot)
-    {
+    private static bool IsValidFirstChar(char value, bool allowColon, bool allowDot) {
         return value == '_' || IsAsciiLetter(value) || (allowColon && value == ':') || (allowDot && value == '.');
     }
 
-    private static bool IsValidNameChar(char value, bool allowColon, bool allowDot)
-    {
+    private static bool IsValidNameChar(char value, bool allowColon, bool allowDot) {
         return IsAsciiLetter(value) || IsAsciiDigit(value) || value == '_' || (allowColon && value == ':')
             || (allowDot && value == '.');
     }
 
-    private static bool IsAsciiLetter(char value)
-    {
+    private static bool IsAsciiLetter(char value) {
         return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
     }
 
-    private static bool IsAsciiDigit(char value)
-    {
+    private static bool IsAsciiDigit(char value) {
         return (value >= '0' && value <= '9');
     }
 }

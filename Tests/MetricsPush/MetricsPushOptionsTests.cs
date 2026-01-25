@@ -4,11 +4,9 @@ using Xunit;
 
 namespace Tests.MetricsPush;
 
-public class MetricsPushOptionsTests
-{
+public class MetricsPushOptionsTests {
     [Fact]
-    public void Constructor_SetsProperties()
-    {
+    public void Constructor_SetsProperties() {
         var tags = new Dictionary<string, string> { { "k", "v" } };
         var options = new MetricsPushOptions(10, "http://uri", tags);
 
@@ -18,8 +16,7 @@ public class MetricsPushOptionsTests
     }
 
     [Fact]
-    public void Constructor_NullTags_InitializesEmpty()
-    {
+    public void Constructor_NullTags_InitializesEmpty() {
         var options = new MetricsPushOptions(10, "http://uri", null!);
         Assert.NotNull(options.PublicTags);
         Assert.Empty(options.PublicTags);

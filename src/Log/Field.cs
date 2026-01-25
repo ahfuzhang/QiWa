@@ -111,8 +111,6 @@ namespace Log {
             };
         }
 
-        //const int minLenOfFirstTag = 6;
-
         /// <summary>
         /// json 序列化到 buffer 中
         /// </summary>
@@ -144,7 +142,7 @@ namespace Log {
                 case FieldDataType.Int64:
                     rent.Append(PrimitiveValue.Int64Value);
                     break;
-                case FieldDataType.Uint64:    
+                case FieldDataType.Uint64:
                     rent.Append(PrimitiveValue.Uint64Value);
                     break;
                 case FieldDataType.DateTime:
@@ -154,7 +152,7 @@ namespace Log {
                     rent.Append(PrimitiveValue.Float64Value);
                     break;
                 default:
-                    throw new Exception("not support type");    
+                    throw new Exception("not support type");
             }
         }
     }

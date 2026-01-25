@@ -14,7 +14,7 @@ report:
 	-reporttypes:Html
 
 test:
-	dotnet test QiWa.csproj --logger "console;verbosity=detailed"
+	dotnet test QiWa.csproj --logger "console;verbosity=detailed" -r osx-arm64
 
 benchmark:
 	dotnet run --project Benchmarks/Benchmarks.csproj -c Release

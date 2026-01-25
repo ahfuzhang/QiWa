@@ -24,6 +24,7 @@ namespace Common {
         /// <exception>out of memory</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Rent(System.Int32 length) {
+            // todo: rent 的总数，释放的总数，应该加上上报。便于跟踪性能
             Data = ArrayPool<byte>.Shared.Rent(length);
             Length = 0;
         }
@@ -52,7 +53,7 @@ namespace Common {
             if (Length + needed <= Data!.Length) {
                 return;
             }
-            byte[] newData = ArrayPool<byte>.Shared.Rent(Data!.Length * 2+needed);
+            byte[] newData = ArrayPool<byte>.Shared.Rent(Data!.Length * 2 + needed);
             Array.Copy(Data, newData, Length);
             ArrayPool<byte>.Shared.Return(Data);
             Data = newData;
@@ -137,8 +138,7 @@ namespace Common {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Error Append(double value) {
             Extend(maxFloat64Length);
-            if (!Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten))
-            {
+            if (!Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten)) {
                 return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
             }
             Length += bytesWritten;

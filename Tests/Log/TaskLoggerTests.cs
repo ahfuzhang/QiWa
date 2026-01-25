@@ -52,14 +52,14 @@ public class TaskLoggerTests : IDisposable {
             // Assert
             var buffer = ThreadLocalLogger.Current.Buffer;
             var json = Encoding.UTF8.GetString(buffer.Data.AsSpan(0, buffer.Length));
-            
+
             // Check basic structure
             Assert.True(json.StartsWith("{"), $"Test '{test.Name}' failed: Log should start with {{. Got: {json}");
             Assert.True(json.EndsWith("}\n"), $"Test '{test.Name}' failed: Log should end with }}\\n. Got: {json}");
-            
+
             // Check specific field
             Assert.True(json.Contains(test.ExpectedPart), $"Test '{test.Name}' failed: Expected to contain '{test.ExpectedPart}'. Got: {json}");
-            
+
             // Check common fields
             Assert.Contains("\"_time\":", json);
             Assert.Contains("\"level\":\"info\"", json);
@@ -73,7 +73,7 @@ public class TaskLoggerTests : IDisposable {
     public void WithFields_Chaining_TableDriven() {
         // Since we can't easily represent ref structs in a list, we hardcode the scenarios in a loop-like structure 
         // or just sequential blocks, but aiming for table-like verify logic.
-        
+
         // Scenario 1: One field attached then Info
         /*
         {
@@ -113,19 +113,19 @@ public class TaskLoggerTests : IDisposable {
         }
         */
     }
-    
+
     [Fact]
     public void LogLevel_RespectsSettings() {
         // Set level to Error, so Info() should NOT log
         Logger.SetLevel(Log.LogLevel.Error);
         ThreadLocalLogger.Current.Buffer.Length = 0;
-        
+
         var tl = new TaskLogger();
         var field = Field.String("foo"u8, "bar");
         tl.Info(field);
-        
+
         Assert.Equal(0, ThreadLocalLogger.Current.Buffer.Length);
-        
+
         // Reset to Info
         Logger.SetLevel(Log.LogLevel.Info);
     }

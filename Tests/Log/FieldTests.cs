@@ -185,7 +185,8 @@ public class LogFieldWriteToTests {
         try {
             field.WriteTo(ref buffer);
             return Encoding.UTF8.GetString(buffer.Bytes());
-        } finally {
+        }
+        finally {
             buffer.Dispose();
         }
     }
@@ -199,7 +200,8 @@ public class LogFieldWriteToTests {
         buffer.Rent(16);
         try {
             field.WriteTo(ref buffer);
-        } finally {
+        }
+        finally {
             buffer.Dispose();
         }
     }
