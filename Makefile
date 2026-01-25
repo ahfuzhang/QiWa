@@ -1,7 +1,7 @@
 
 coverage:
 	mkdir -p build/TestResults
-	dotnet test QiWa.csproj /p:CollectCoverage=true /p:CoverletOutput=./build/TestResults/ /p:CoverletOutputFormat=opencover
+	dotnet test QiWa.csproj /p:CollectCoverage=true /p:CoverletOutput=./build/TestResults/ /p:CoverletOutputFormat=opencover  -r osx-arm64
 	dotnet tool run reportgenerator \
 	-reports:./build/TestResults/coverage.opencover.xml \
 	-targetdir:./build/coveragereport \

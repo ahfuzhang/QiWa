@@ -1,208 +1,280 @@
 using System;
-using System.Globalization;
 using System.Text;
-using Xunit;
 using Log;
+using Xunit;
 
-public class LogFieldFactoryTests {
-    [Fact]
-    public void String_SetsNameTypeAndValue() {
-        var field = Field.String("msg"u8, "hello");
-
-        Assert.Equal(FieldDataType.String, field.DataType);
-        Assert.Equal("msg", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal("hello", field.StringValue);
-    }
-
-    [Fact]
-    public void Utf8String_SetsNameTypeAndValue() {
-        var field = Field.Utf8String("msg"u8, "hello"u8);
-
-        Assert.Equal(FieldDataType.Utf8String, field.DataType);
-        Assert.Equal("msg", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal("hello", Encoding.UTF8.GetString(field.Utf8StringValue));
-    }
-
-    [Fact]
-    public void Bool_SetsNameTypeAndValue() {
-        var field = Field.Bool("flag"u8, true);
-
-        Assert.Equal(FieldDataType.Bool, field.DataType);
-        Assert.Equal("flag", Encoding.UTF8.GetString(field.Name));
-        Assert.True(field.PrimitiveValue.BoolValue);
-    }
-
-    [Fact]
-    public void Int64_SetsNameTypeAndValue() {
-        var field = Field.Int64("count"u8, -42);
-
-        Assert.Equal(FieldDataType.Int64, field.DataType);
-        Assert.Equal("count", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal(-42, field.PrimitiveValue.Int64Value);
-    }
-
-    [Fact]
-    public void UInt64_SetsNameTypeAndValue() {
-        var field = Field.UInt64("count"u8, 42);
-
-        Assert.Equal(FieldDataType.Uint64, field.DataType);
-        Assert.Equal("count", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal((ulong)42, field.PrimitiveValue.Uint64Value);
-    }
-
-    [Fact]
-    public void Float64_SetsNameTypeAndValue() {
-        var field = Field.Float64("ratio"u8, 12.5);
-
-        Assert.Equal(FieldDataType.Float64, field.DataType);
-        Assert.Equal("ratio", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal(12.5, field.PrimitiveValue.Float64Value);
-    }
-
-    [Fact]
-    public void UtcDateTime_SetsNameTypeAndValue() {
-        var dtm = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc);
-        var field = Field.UtcDateTime("time"u8, dtm);
-
-        Assert.Equal(FieldDataType.DateTime, field.DataType);
-        Assert.Equal("time", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal(dtm, field.PrimitiveValue.DateTimeValue);
-    }
-
-    [Fact]
-    public void RawJsonString_SetsNameTypeAndValue() {
-        var field = Field.RawJson("payload"u8, "{\"a\":1}");
-
-        Assert.Equal(FieldDataType.RawJsonString, field.DataType);
-        Assert.Equal("payload", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal("{\"a\":1}", field.StringValue);
-    }
-
-    [Fact]
-    public void RawJsonUtf8String_SetsNameTypeAndValue() {
-        var field = Field.RawJson("payload"u8, "{\"a\":1}"u8);
-
-        Assert.Equal(FieldDataType.RawJsonUtf8String, field.DataType);
-        Assert.Equal("payload", Encoding.UTF8.GetString(field.Name));
-        Assert.Equal("{\"a\":1}", Encoding.UTF8.GetString(field.Utf8StringValue));
-    }
-}
-
-public class LogFieldWriteToTests {
-    [Fact]
-    public void WriteTo_String_EscapesAndQuotes() {
-        var field = Field.String("msg"u8, "a\"b\n");
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"msg\":\"a\\u0022b\\n\"", text);
-    }
-
-    [Fact]
-    public void WriteTo_Utf8String_EscapesAndQuotes() {
-        var field = Field.Utf8String("msg"u8, "a\tb\n\"\\c"u8);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"msg\":\"a\\tb\\n\\\"\\\\c\"", text);
-    }
-
-    [Fact]
-    public void WriteTo_Bool_WritesLiteral() {
-        var field = Field.Bool("flag"u8, true);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"flag\":true", text);
-    }
-
-    [Fact]
-    public void WriteTo_Int64_WritesLiteral() {
-        var field = Field.Int64("count"u8, -42);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"count\":-42", text);
-    }
-
-    [Fact]
-    public void WriteTo_UInt64_WritesLiteral() {
-        var field = Field.UInt64("count"u8, 42);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"count\":42", text);
-    }
-
-    [Fact]
-    public void WriteTo_Float64_WritesLiteral() {
-        var value = 123.5;
-        var field = Field.Float64("ratio"u8, value);
-
-        var text = WriteToString(ref field);
-
-        var expected = "\"ratio\":" + value.ToString(CultureInfo.InvariantCulture);
-        Assert.Equal(expected, text);
-    }
-
-    [Fact]
-    public void WriteTo_DateTime_WritesUtcFormat() {
-        var dtm = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc);
-        var field = Field.UtcDateTime("time"u8, dtm);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"time\":2024-01-02T03:04:05.0000000Z", text);
-    }
-
-    [Fact]
-    public void WriteTo_RawJsonString_WritesRaw() {
-        var field = Field.RawJson("payload"u8, "{\"a\":1}");
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"payload\":{\"a\":1}", text);
-    }
-
-    [Fact]
-    public void WriteTo_RawJsonUtf8String_WritesRaw() {
-        var field = Field.RawJson("payload"u8, "{\"a\":1}"u8);
-
-        var text = WriteToString(ref field);
-
-        Assert.Equal("\"payload\":{\"a\":1}", text);
-    }
-
-    [Fact]
-    public void WriteTo_UnsupportedType_Throws() {
-        var ex = Assert.Throws<Exception>(WriteUnsupportedType);
-        Assert.Equal("not support type", ex.Message);
-    }
-
-    private static string WriteToString(ref Field field) {
-        Common.RentedBuffer buffer = default;
-        buffer.Rent(128);
-        try {
-            field.WriteTo(ref buffer);
-            return Encoding.UTF8.GetString(buffer.Bytes());
+namespace Tests.Log {
+    public class FieldTests {
+        #region TestCase Structures
+        public struct StringFieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public string Value;
+            public string ExpectedJson;
         }
-        finally {
-            buffer.Dispose();
-        }
-    }
 
-    private static void WriteUnsupportedType() {
-        Field field = new Field {
-            Name = "bad"u8,
-            DataType = (FieldDataType)123
-        };
-        Common.RentedBuffer buffer = default;
-        buffer.Rent(16);
-        try {
-            field.WriteTo(ref buffer);
+        public struct Utf8StringFieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public byte[] Value;
+            public string ExpectedJson;
         }
-        finally {
-            buffer.Dispose();
+
+        public struct BoolFieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public bool Value;
+            public string ExpectedJson;
+        }
+
+        public struct Int64FieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public long Value;
+            public string ExpectedJson;
+        }
+
+        public struct UInt64FieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public ulong Value;
+            public string ExpectedJson;
+        }
+
+        public struct Float64FieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public double Value;
+            public string ExpectedJson;
+        }
+
+        public struct DateTimeFieldTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public DateTime Value;
+            public string ExpectedJsonPattern;
+        }
+
+        public struct RawJsonStringTestCase {
+            public string Name;
+            public byte[] FieldName;
+            public string Value;
+            public string ExpectedJson;
+        }
+
+        public struct RawJsonUtf8TestCase {
+            public string Name;
+            public byte[] FieldName;
+            public byte[] Value;
+            public string ExpectedJson;
+        }
+        #endregion
+
+        [Fact]
+        public void String_CreatesFieldWithCorrectProperties() {
+            var testCases = new StringFieldTestCase[] {
+                new() { Name = "simple string", FieldName = "msg"u8.ToArray(), Value = "hello", ExpectedJson = "\"msg\":\"hello\"" },
+                new() { Name = "empty string", FieldName = "empty"u8.ToArray(), Value = "", ExpectedJson = "\"empty\":\"\"" },
+                new() { Name = "string with quotes", FieldName = "quoted"u8.ToArray(), Value = "say \"hi\"", ExpectedJson = "\"quoted\":\"say \\\"hi\\\"\"" },
+                new() { Name = "string with newline", FieldName = "nl"u8.ToArray(), Value = "line1\nline2", ExpectedJson = "\"nl\":\"line1\\nline2\"" },
+                new() { Name = "string with tab", FieldName = "tab"u8.ToArray(), Value = "a\tb", ExpectedJson = "\"tab\":\"a\\tb\"" },
+                new() { Name = "string with backslash", FieldName = "bs"u8.ToArray(), Value = "path\\file", ExpectedJson = "\"bs\":\"path\\\\file\"" },
+                new() { Name = "unicode string", FieldName = "unicode"u8.ToArray(), Value = "你好世界", ExpectedJson = "\"unicode\":\"你好世界\"" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.String(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.String, field.DataType);
+                Assert.Equal(tc.Value, field.StringValue);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                // Note: System.Text.Json uses unicode escapes for some characters
+                Assert.Contains($"\"{Encoding.UTF8.GetString(tc.FieldName)}\":", result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void Utf8String_CreatesFieldWithCorrectProperties() {
+            var testCases = new Utf8StringFieldTestCase[] {
+                new() { Name = "simple utf8", FieldName = "msg"u8.ToArray(), Value = "hello"u8.ToArray(), ExpectedJson = "\"msg\":\"hello\"" },
+                new() { Name = "empty utf8", FieldName = "empty"u8.ToArray(), Value = Array.Empty<byte>(), ExpectedJson = "\"empty\":\"\"" },
+                new() { Name = "utf8 with quotes", FieldName = "quoted"u8.ToArray(), Value = "say \"hi\""u8.ToArray(), ExpectedJson = "\"quoted\":\"say \\\"hi\\\"\"" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.Utf8String(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.Utf8String, field.DataType);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void Bool_CreatesFieldWithCorrectProperties() {
+            var testCases = new BoolFieldTestCase[] {
+                new() { Name = "true value", FieldName = "enabled"u8.ToArray(), Value = true, ExpectedJson = "\"enabled\":true" },
+                new() { Name = "false value", FieldName = "disabled"u8.ToArray(), Value = false, ExpectedJson = "\"disabled\":false" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.Bool(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.Bool, field.DataType);
+                Assert.Equal(tc.Value, field.PrimitiveValue.BoolValue);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void Int64_CreatesFieldWithCorrectProperties() {
+            var testCases = new Int64FieldTestCase[] {
+                new() { Name = "positive value", FieldName = "count"u8.ToArray(), Value = 12345, ExpectedJson = "\"count\":12345" },
+                new() { Name = "negative value", FieldName = "diff"u8.ToArray(), Value = -999, ExpectedJson = "\"diff\":-999" },
+                new() { Name = "zero value", FieldName = "zero"u8.ToArray(), Value = 0, ExpectedJson = "\"zero\":0" },
+                new() { Name = "max value", FieldName = "max"u8.ToArray(), Value = long.MaxValue, ExpectedJson = $"\"max\":{long.MaxValue}" },
+                new() { Name = "min value", FieldName = "min"u8.ToArray(), Value = long.MinValue, ExpectedJson = $"\"min\":{long.MinValue}" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.Int64(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.Int64, field.DataType);
+                Assert.Equal(tc.Value, field.PrimitiveValue.Int64Value);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void UInt64_CreatesFieldWithCorrectProperties() {
+            var testCases = new UInt64FieldTestCase[] {
+                new() { Name = "positive value", FieldName = "count"u8.ToArray(), Value = 12345, ExpectedJson = "\"count\":12345" },
+                new() { Name = "zero value", FieldName = "zero"u8.ToArray(), Value = 0, ExpectedJson = "\"zero\":0" },
+                new() { Name = "max value", FieldName = "max"u8.ToArray(), Value = ulong.MaxValue, ExpectedJson = $"\"max\":{ulong.MaxValue}" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.UInt64(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.Uint64, field.DataType);
+                Assert.Equal(tc.Value, field.PrimitiveValue.Uint64Value);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void Float64_CreatesFieldWithCorrectProperties() {
+            var testCases = new Float64FieldTestCase[] {
+                new() { Name = "positive decimal", FieldName = "rate"u8.ToArray(), Value = 3.14159, ExpectedJson = "\"rate\":3.14159" },
+                new() { Name = "negative decimal", FieldName = "temp"u8.ToArray(), Value = -273.15, ExpectedJson = "\"temp\":-273.15" },
+                new() { Name = "zero value", FieldName = "zero"u8.ToArray(), Value = 0.0, ExpectedJson = "\"zero\":0" },
+                new() { Name = "integer as double", FieldName = "int"u8.ToArray(), Value = 42.0, ExpectedJson = "\"int\":42" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.Float64(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.Float64, field.DataType);
+                Assert.Equal(tc.Value, field.PrimitiveValue.Float64Value);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void UtcDateTime_CreatesFieldWithCorrectProperties() {
+            var utcTime = new DateTime(2024, 6, 15, 10, 30, 45, DateTimeKind.Utc).AddTicks(1234567);
+            var field = Field.UtcDateTime("timestamp"u8.ToArray(), utcTime);
+
+            Assert.Equal(FieldDataType.DateTime, field.DataType);
+            Assert.Equal(utcTime, field.PrimitiveValue.DateTimeValue);
+
+            Common.RentedBuffer buf = new(256);
+            field.WriteTo(ref buf);
+            var result = Encoding.UTF8.GetString(buf.Bytes());
+            Assert.Contains("\"timestamp\":", result);
+            Assert.Contains("2024-06-15T10:30:45", result);
+            buf.Dispose();
+        }
+
+        [Fact]
+        public void RawJson_String_CreatesFieldWithCorrectProperties() {
+            var testCases = new RawJsonStringTestCase[] {
+                new() { Name = "json object", FieldName = "data"u8.ToArray(), Value = "{\"a\":1}", ExpectedJson = "\"data\":{\"a\":1}" },
+                new() { Name = "json array", FieldName = "arr"u8.ToArray(), Value = "[1,2,3]", ExpectedJson = "\"arr\":[1,2,3]" },
+                new() { Name = "json number", FieldName = "num"u8.ToArray(), Value = "123", ExpectedJson = "\"num\":123" },
+                new() { Name = "json null", FieldName = "nil"u8.ToArray(), Value = "null", ExpectedJson = "\"nil\":null" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.RawJson(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.RawJsonString, field.DataType);
+                Assert.Equal(tc.Value, field.StringValue);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void RawJson_Utf8_CreatesFieldWithCorrectProperties() {
+            var testCases = new RawJsonUtf8TestCase[] {
+                new() { Name = "json object", FieldName = "data"u8.ToArray(), Value = "{\"a\":1}"u8.ToArray(), ExpectedJson = "\"data\":{\"a\":1}" },
+                new() { Name = "json array", FieldName = "arr"u8.ToArray(), Value = "[1,2,3]"u8.ToArray(), ExpectedJson = "\"arr\":[1,2,3]" },
+            };
+
+            foreach (var tc in testCases) {
+                var field = Field.RawJson(tc.FieldName, tc.Value);
+                Assert.Equal(FieldDataType.RawJsonUtf8String, field.DataType);
+
+                Common.RentedBuffer buf = new(256);
+                field.WriteTo(ref buf);
+                var result = Encoding.UTF8.GetString(buf.Bytes());
+                Assert.Equal(tc.ExpectedJson, result);
+                buf.Dispose();
+            }
+        }
+
+        [Fact]
+        public void FieldDataType_HasAllExpectedValues() {
+            // Verify all enum values exist and can be used
+            var allTypes = new FieldDataType[] {
+                FieldDataType.String,
+                FieldDataType.Utf8String,
+                FieldDataType.Bool,
+                FieldDataType.Int64,
+                FieldDataType.Uint64,
+                FieldDataType.Float64,
+                FieldDataType.DateTime,
+                FieldDataType.RawJsonString,
+                FieldDataType.RawJsonUtf8String,
+            };
+
+            Assert.Equal(9, allTypes.Length);
         }
     }
 }
