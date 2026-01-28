@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 
 namespace Log {
-    public unsafe class ThreadLocalLogger {
+    public class ThreadLocalLogger {
         private ulong _locker = 0;
 #pragma warning disable CS0169
         // avoid false sharing
@@ -57,11 +57,23 @@ namespace Log {
             if (Buffer.Length < Buffer.Data!.Length - reservedBufferLen) {
                 return;
             }
+            if (Logger.Instance.OverloadPolicy == OverloadPolicy.Direct) {
+                lock (Logger.Instance.Locker) {
+                    Common.NativeWrite.WriteStdout(Buffer.Data.AsSpan(0, Buffer.Length));
+                    Buffer.Length = 0;
+                }
+                return;
+            }
             // 抢占 stdout 的锁
-            if (Interlocked.CompareExchange(ref Logger.StdoutOccupy, 1, 0) != 0) {
+            bool taken = Monitor.TryEnter(Logger.Instance!.Locker);
+            if (!taken) {
                 SwitchBuffer();
                 return;
             }
+            // if (Interlocked.CompareExchange(ref Logger.StdoutOccupy, 1, 0) != 0) {
+            //     SwitchBuffer();
+            //     return;
+            // }
             try {
                 // todo: 计时，并记录字节数
                 Common.NativeWrite.WriteStdout(Buffer.Data.AsSpan(0, Buffer.Length));
@@ -69,7 +81,8 @@ namespace Log {
             }
             finally {
                 // 释放 stdout 的锁
-                Interlocked.CompareExchange(ref Logger.StdoutOccupy, 0, 1);
+                //Interlocked.CompareExchange(ref Logger.StdoutOccupy, 0, 1);
+                Monitor.Exit(Logger.Instance!.Locker);
             }
         }
 

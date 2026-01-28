@@ -17,10 +17,10 @@ test:
 	dotnet test QiWa.csproj --logger "console;verbosity=detailed" -r osx-arm64
 
 benchmark:
-	dotnet run --project Benchmarks/Benchmarks.csproj -c Release
+	dotnet run --project Benchmarks/Benchmarks.csproj -c Release  -r osx-arm64
 
 benchmark-all:
-	dotnet run --project Benchmarks/Benchmarks.csproj -c Release -- --filter *
+	dotnet run --project Benchmarks/Benchmarks.csproj -c Release -r osx-arm64 -- --filter "*"
 
 flamegraph:
 	dotnet-trace convert --format Speedscope \

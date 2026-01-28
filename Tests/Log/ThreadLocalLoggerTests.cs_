@@ -145,7 +145,7 @@ namespace Tests.Log {
                 level: LogLevel.Debug, 
                 flushIntervalMs: 5000,
                 tags: new Dictionary<string, string>{ {"namespace", "backend-team"},{"env", "testing"} },
-                overload: global::Log.OverloadPolicy.Block,
+                overload: global::Log.OverloadPolicy.Direct,
                 queueSize: 1,
                 logBufferSize: 1024*4
             );
@@ -169,9 +169,11 @@ namespace Tests.Log {
             GC.Collect();
             Thread.Sleep(1000);
             // 模拟抢 stdout 锁失败
-            global::Log.Logger.StdoutOccupy = 1;
-            Logger.SetLevel(LogLevel.Info); output();
-            global::Log.Logger.StdoutOccupy = 0;
+            //global::Log.Logger.StdoutOccupy = 1;
+            lock (global::Log.Logger.Instance!.Locker){
+                Logger.SetLevel(LogLevel.Info); output();
+            }
+            //global::Log.Logger.StdoutOccupy = 0;
             Thread.Sleep(10000);
         }
 

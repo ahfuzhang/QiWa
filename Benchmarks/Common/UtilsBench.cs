@@ -22,5 +22,5 @@ public class RentBufferBench {
         int n = System.Random.Shared.Next(1, 65536);
         byte[] arr = new byte[n];
         arr[System.Random.Shared.Next(0, n)] = (byte)'b';
-    }
+    } 
 }

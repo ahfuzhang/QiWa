@@ -104,6 +104,15 @@ internal static class Program {
                 };
             });
         });
+        // 初始化日志对象
+        Log.Logger.Init(
+            level: Log.LogLevel.Info, 
+            flushIntervalMs: 1000, 
+            tags: new Dictionary<string, string>{}, 
+            overload: Log.OverloadPolicy.Direct, 
+            queueSize:1, 
+            logBufferSize: 1024*16
+        );
 
         builder.WebHost.ConfigureKestrel(options => {
             options.ListenAnyIP(port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
@@ -196,11 +205,23 @@ internal static class Program {
         context.Response.ContentType = "text/plain";
         await context.Response.BodyWriter.WriteAsync(rent.Data!.AsMemory(0, rent.Length), context.RequestAborted);
         if (outputRequestLog) {
-            LogRequest(context, 200, logger);
+            LogRequestV0(context, 200);
         }
     }
 
-    private static void LogRequest(HttpContext ctx, int statusCode, ILogger logger) {
+    private static void LogRequestV5(HttpContext ctx, int statusCode) {
+        var req = ctx.Request;
+        var logger = new Log.TaskLogger();
+        logger.Info(
+            Log.Field.String("method"u8, req.Method),
+            Log.Field.String("host"u8, req.Host.ToString()),
+            Log.Field.String("path"u8, req.Path.ToString()),
+            Log.Field.String("querystring"u8, req.QueryString.ToString()),
+            Log.Field.Int64("status_code"u8, statusCode)
+        );
+    }
+
+    private static void LogRequestV0(HttpContext ctx, int statusCode) {
         var req = ctx.Request;
         using var rent = new Common.RentedBuffer(1024);
         rent.Append("{\"_time\":\""u8);

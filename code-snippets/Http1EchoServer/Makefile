@@ -76,6 +76,20 @@ run-in-docker-linux-arm64:
 			-threadpool.max=1 \
 			-output.request.log=true
 
+run-in-docker-linux-arm64-background:
+	docker run --rm -d \
+	    --platform=linux/arm64 \
+		-p 8081:8081 \
+		--cpuset-cpus="3" \
+		-m 256m \
+		http1-echo-server:latest \
+			-http1.port=8081 \
+			-metrics.push.interval.seconds=1 \
+			-metrics.push.addr=http://host.docker.internal:8480/insert/0/prometheus/api/v1/import/prometheus \
+			-metrics.push.extra.labels='customer_brand=pg&customer_env=stress-test&customer_cluster=mp-landing-ali-cn-hk-c&namespace=backend-team&job=qiwa&pod=qiwa-metrics-push-88d88b5c7-0000a' \
+			-threadpool.max=1 \
+			-output.request.log=true
+
 run-in-docker-linux-amd64:
 	docker run --rm \
 	    --platform=linux/amd64 \

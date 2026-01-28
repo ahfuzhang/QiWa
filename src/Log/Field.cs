@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Log {
     public enum FieldDataType {
@@ -115,6 +116,7 @@ namespace Log {
         /// json 序列化到 buffer 中
         /// </summary>
         /// <param name="rent"></param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteTo(ref Common.RentedBuffer rent) {
             rent.Append((byte)'"');
             rent.Append(Name);

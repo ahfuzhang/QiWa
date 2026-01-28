@@ -5,9 +5,9 @@ namespace Common {
     public static class NativeWrite {
         public static void WriteStdout(ReadOnlySpan<byte> data) {
 #if WINDOWS
-        WindowsWrite(data);
+            WindowsWrite(data);
 #elif UNIX
-        UnixWrite(data);
+            UnixWrite(data);
 #else
             throw new PlatformNotSupportedException();
 #endif
@@ -19,9 +19,6 @@ namespace Common {
 
         private static void UnixWrite(ReadOnlySpan<byte> data)
         {
-            // if (data.IsEmpty) {
-            //     return;
-            // }
             unsafe {
                 fixed (byte* ptr = data) {
                     write(1, (IntPtr)ptr, (ulong)data.Length);
@@ -44,9 +41,6 @@ namespace Common {
 
         private static void WindowsWrite(ReadOnlySpan<byte> data)
         {
-            // if (data.IsEmpty) {
-            //     return;
-            // }
             unsafe {
                 fixed (byte* ptr = data) {
                     WriteFile(GetStdHandle(-11), (IntPtr)ptr, (uint)data.Length, out _, IntPtr.Zero);
@@ -55,7 +49,6 @@ namespace Common {
         }
 #endif
     }
-
 }
 
 

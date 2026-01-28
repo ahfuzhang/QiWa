@@ -28,6 +28,12 @@ namespace Log {
     /// </summary>
     public enum OverloadPolicy {
         /// <summary>
+        /// 直接输出到 stdout，不再使用异步模式
+        /// </summary>
+        Direct,
+
+
+        /// <summary>
         /// 写入到 Channel 的时候，阻塞线程
         /// </summary>
         Block,
@@ -42,15 +48,15 @@ namespace Log {
     /// 全局日志对象
     /// </summary>
     public class Logger : IDisposable {
-        internal static System.UInt64 StdoutOccupy = 0;  // 当前 stdout 是否被占用
-#pragma warning disable CS0169
-        // avoid false sharing
-        [SuppressMessage(
-            "Usage",
-            "IDE0051:Remove unused private members",
-            Justification = "Used via reflection")]
-        private static System.UInt64 _pad1_, _pad2_, _pad3_, _pad4_, _pad5_, _pad6_, _pad7_;
-#pragma warning restore CS0169
+        //         internal static System.UInt64 StdoutOccupy = 0;  // 当前 stdout 是否被占用
+        // #pragma warning disable CS0169
+        //         // avoid false sharing
+        //         [SuppressMessage(
+        //             "Usage",
+        //             "IDE0051:Remove unused private members",
+        //             Justification = "Used via reflection")]
+        //         private static System.UInt64 _pad1_, _pad2_, _pad3_, _pad4_, _pad5_, _pad6_, _pad7_;
+        // #pragma warning restore CS0169
 
         internal static Logger? Instance = null;
 
@@ -61,13 +67,14 @@ namespace Log {
         const int defaultFlushIntervalMs = 1000;
 
         private int flushIntervalMs = defaultFlushIntervalMs;  // 输出日志的间隔时间
-        private readonly PeriodicTimer flushTimer;
+        private readonly PeriodicTimer? flushTimer;
 
-        private readonly Task consumerTask;
-        private readonly Task timerTask;
+        private readonly Task? consumerTask;
+        private readonly Task? timerTask;
 
-        internal readonly CancellationTokenSource LoggerToken;
-        internal readonly Channel<Common.RentedBuffer> BufferChannel;
+        internal readonly object Locker = new object();
+        internal readonly CancellationTokenSource? LoggerToken;
+        internal readonly Channel<Common.RentedBuffer>? BufferChannel;
         internal LogLevel Level = LogLevel.Info;  // 全局的日志级别
         internal byte[] TagPrefix = [];
         internal OverloadPolicy OverloadPolicy;
@@ -92,7 +99,7 @@ namespace Log {
         /// <param name="logBufferSize">日志缓冲区的大小</param>
         public static void Init(LogLevel level = LogLevel.Warn, int flushIntervalMs = 1000,
                 Dictionary<string, string>? tags = null,
-                OverloadPolicy overload = OverloadPolicy.Block,
+                OverloadPolicy overload = OverloadPolicy.Direct,
                 int queueSize = maxQueueSize,
                 int logBufferSize = defaultLogBufferSize) {
             if (queueSize < 1) {
@@ -115,6 +122,9 @@ namespace Log {
 
         private Logger(OverloadPolicy overload, int queueSize) {
             OverloadPolicy = overload;
+            if (overload == OverloadPolicy.Direct) {
+                return;
+            }
             BufferChannel = Channel.CreateBounded<Common.RentedBuffer>(new BoundedChannelOptions(queueSize) {
                 FullMode = BoundedChannelFullMode.Wait,  // channel 的阻塞策略，可以配置的
                 SingleReader = true,
@@ -188,17 +198,22 @@ namespace Log {
                 }
                 // 占用 stdout
                 // todo: 记录等锁的时间
-                while (Interlocked.CompareExchange(ref StdoutOccupy, 1, 0) != 0) {
-                    await Task.Yield();
-                }
+                // while (Interlocked.CompareExchange(ref StdoutOccupy, 1, 0) != 0) {
+                //     await Task.Yield();
+                // }
                 // 加锁成功
+                bool taken = false;
                 try {
+                    Monitor.Enter(Locker, ref taken);
                     // todo: 记录 io 的总时间
                     Common.NativeWrite.WriteStdout(buffer.Data.AsSpan(0, buffer.Length));
                 }
                 finally {
                     // 释放锁
-                    Interlocked.CompareExchange(ref StdoutOccupy, 0, 1);
+                    if (taken) {
+                        Monitor.Exit(Locker);
+                    }
+                    //Interlocked.CompareExchange(ref StdoutOccupy, 0, 1);
                     buffer.Dispose();  // 借用的内存还回去
                 }
             }
@@ -222,6 +237,9 @@ namespace Log {
         }
 
         public void Dispose() {
+            if (this.OverloadPolicy == OverloadPolicy.Direct) {
+                return;
+            }
             LoggerToken.Cancel();
             LoggerToken.Dispose();
             flushTimer.Dispose();
