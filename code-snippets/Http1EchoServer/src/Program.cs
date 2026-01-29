@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MetricsPush;
+using System.Runtime.CompilerServices;
 
 using OpenTelemetry.Metrics;
 using System.Security.AccessControl;
@@ -32,6 +33,7 @@ internal static class Program {
         "Total HTTP requests.");
     private static readonly long ServiceStartTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     private static readonly System.IO.Stream Stdout = Console.OpenStandardOutput();
+    private static readonly object locker = new object();
 
     public static async Task<int> Main(string[] args) {
         // Define metric
@@ -105,13 +107,19 @@ internal static class Program {
             });
         });
         // 初始化日志对象
-        Log.Logger.Init(
-            level: Log.LogLevel.Info, 
-            flushIntervalMs: 1000, 
-            tags: new Dictionary<string, string>{}, 
-            overload: Log.OverloadPolicy.Direct, 
-            queueSize:1, 
-            logBufferSize: 1024*16
+        // Log.Logger.Init(
+        //     level: Log.LogLevel.Info, 
+        //     flushIntervalMs: 1000, 
+        //     tags: new Dictionary<string, string>{}, 
+        //     overload: Log.OverloadPolicy.Direct, 
+        //     queueSize:1, 
+        //     logBufferSize: 1024*16
+        // );
+        ConsoleLogger.Logger.Init(
+            global::ConsoleLogger.LogLevel.Debug, 
+            1000, 
+            new Dictionary<string, string>(){{"namespace","backend-team"}}, 
+            1024*16
         );
 
         builder.WebHost.ConfigureKestrel(options => {
@@ -205,20 +213,66 @@ internal static class Program {
         context.Response.ContentType = "text/plain";
         await context.Response.BodyWriter.WriteAsync(rent.Data!.AsMemory(0, rent.Length), context.RequestAborted);
         if (outputRequestLog) {
-            LogRequestV0(context, 200);
+            LogRequestV7(context, 200);
         }
     }
 
-    private static void LogRequestV5(HttpContext ctx, int statusCode) {
+    // private static void LogRequestV5(HttpContext ctx, int statusCode) {
+    //     var req = ctx.Request;
+    //     var logger = new Log.TaskLogger();
+    //     logger.Info(
+    //         Log.Field.String("method"u8, req.Method),
+    //         Log.Field.String("host"u8, req.Host.ToString()),
+    //         Log.Field.String("path"u8, req.Path.ToString()),
+    //         Log.Field.String("querystring"u8, req.QueryString.ToString()),
+    //         Log.Field.Int64("status_code"u8, statusCode)
+    //     );
+    // }
+    private static void LogRequestV6(HttpContext ctx, int statusCode) {
         var req = ctx.Request;
-        var logger = new Log.TaskLogger();
-        logger.Info(
-            Log.Field.String("method"u8, req.Method),
-            Log.Field.String("host"u8, req.Host.ToString()),
-            Log.Field.String("path"u8, req.Path.ToString()),
-            Log.Field.String("querystring"u8, req.QueryString.ToString()),
-            Log.Field.Int64("status_code"u8, statusCode)
-        );
+        var logger = ConsoleLogger.Logger.Get();
+        try{
+            logger.Info(
+                ConsoleLogger.Field.String("method"u8, req.Method),
+                ConsoleLogger.Field.String("host"u8, req.Host.ToString()),
+                ConsoleLogger.Field.String("path"u8, req.Path.ToString()),
+                ConsoleLogger.Field.String("querystring"u8, req.QueryString.ToString()),
+                ConsoleLogger.Field.Int64("status_code"u8, statusCode)
+            );
+        }finally{
+            ConsoleLogger.Logger.Return(logger);
+        }
+    }
+
+    private static void LogRequestV7(HttpContext ctx, int statusCode, 
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0) {
+        var req = ctx.Request;
+        using var rent = new Common.RentedBuffer(1024);
+        rent.Append("{\"_time\":\""u8);
+        rent.AppendUtcDatetime(DateTime.UtcNow);
+        rent.Append("\",\"method\":\""u8);
+        rent.Append(req.Method);
+        rent.Append("\",\"host\":\""u8);
+        rent.Append(req.Host.ToString());
+        rent.Append("\",\"path\":\""u8);
+        rent.Append(req.Path.ToString());
+        rent.Append("\",\"querystring\":\""u8);
+        rent.Append(req.QueryString.ToString());
+        rent.Append("\",\"status_code\":"u8);
+        rent.Append(statusCode);
+        //
+        rent.Append("\",\"namespace\":\""u8);
+        rent.Append("backend-team");
+        rent.Append("\",\"level\":\""u8);rent.Append("info");
+        rent.Append("\",\"_file\":\""u8);rent.Append(file);
+        rent.Append("\",\"_member\":\""u8);rent.Append(member);
+        rent.Append("\",\"_line\":\""u8);rent.Append(line);
+        rent.Append("}\n");
+        lock(locker){
+            Stdout.Write(rent.Bytes());
+        }
     }
 
     private static void LogRequestV0(HttpContext ctx, int statusCode) {

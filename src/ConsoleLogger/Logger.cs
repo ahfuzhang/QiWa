@@ -113,6 +113,7 @@ namespace ConsoleLogger
             Debug.Assert(Logger.Instance != null);
             var l = Logger.Instance.pool.Get();
             l.prefix.Length = 0;
+            l.prefix.Append(Logger.Instance.TagPrefix);
             return l;
         }
 

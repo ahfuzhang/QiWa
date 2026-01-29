@@ -20,11 +20,6 @@
     <Compile Include="../../src/MetricsPush/**/*.cs" LinkBase="MetricsPush" />
     <Compile Include="../../src/Compress/**/*.cs" LinkBase="Compress" />
     <Compile Include="../../src/Common/**/*.cs" LinkBase="Common" />
-    <Compile Include="../../src/Log/**/*.cs" LinkBase="Log" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <Compile Include="../../src/ConsoleLogger/**/*.cs" LinkBase="ConsoleLogger" />
   </ItemGroup>
 </Project>

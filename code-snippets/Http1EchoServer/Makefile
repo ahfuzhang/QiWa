@@ -3,7 +3,7 @@ PRJ=Http1EchoServer
 BUILD_DIR := $(ROOT_DIR)/build/code-snippets/$(PRJ)
 
 build:
-	dotnet build $(PRJ).csproj -c Release -o $(BUILD_DIR)
+	dotnet build $(PRJ).csproj -r linux-x64 -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true -c Release -o $(BUILD_DIR)
 
 run:
 	$(BUILD_DIR)/$(PRJ) \
@@ -29,6 +29,7 @@ build-linux-amd64:
 		-c Release -r linux-x64 \
 		-p:PublishAot=true \
 		-p:StripSymbols=false \
+		-p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
 		--self-contained true \
 		-o /src/build/code-snippets/$(PRJ)/linux/amd64 \
 		'
@@ -58,6 +59,7 @@ docker-build-linux-arm64:
 	docker build --build-arg BIN=./bin/linux/arm64/$(PRJ) --platform linux/arm64 -t http1-echo-server .
 
 docker-build-linux-amd64:
+	sudo rm -fdr ./bin/
 	mkdir -p ./bin/linux/amd64/
 	cp $(BUILD_DIR)/linux/amd64/$(PRJ) ./bin/linux/amd64/
 	docker build --build-arg BIN=./bin/linux/amd64/$(PRJ) --platform linux/amd64 -t http1-echo-server .
@@ -103,6 +105,24 @@ run-in-docker-linux-amd64:
 			-metrics.push.extra.labels='customer_brand=pg&customer_env=stress-test&customer_cluster=mp-landing-ali-cn-hk-c&namespace=backend-team&job=qiwa&pod=qiwa-metrics-push-88d88b5c7-0000a' \
 			-threadpool.max=1 \
 			-output.request.log=true
+
+run-in-docker-linux-amd64-background:
+	docker run --rm -d --name=http1_echo_server \
+	    --platform=linux/amd64 \
+		-p 8081:8081 \
+		--cpuset-cpus="8,9,10,11,12,13,14,15" \
+		-m 256m \
+		--network host \
+		http1-echo-server:latest \
+			-http1.port=8081 \
+			-metrics.push.interval.seconds=1 \
+			-metrics.push.addr= \
+			-metrics.push.extra.labels='customer_brand=pg&customer_env=stress-test&customer_cluster=mp-landing-ali-cn-hk-c&namespace=backend-team&job=qiwa&pod=qiwa-metrics-push-88d88b5c7-0000a' \
+			-threadpool.max=8 \
+			-output.request.log=true
+
+docker-stop:
+	docker stop http1_echo_server
 
 request_metrics:
 	curl -G "http://127.0.0.1:8081/metrics"

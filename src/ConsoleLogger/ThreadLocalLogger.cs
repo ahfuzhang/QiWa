@@ -99,7 +99,7 @@ namespace ConsoleLogger
             {
                 while (await flushTimer.WaitForNextTickAsync(Logger.Instance.LoggerToken.Token))
                 {
-                    Console.WriteLine("timer run");
+                    //Console.WriteLine("timer run");
                     // 检查退出信号，且等待定时器触发
                     BufferWrapper? wrapper;
                     lock (locker)
@@ -108,7 +108,7 @@ namespace ConsoleLogger
                         var rent = GetBuffer();
                         if (rent.Length == 0)
                         {
-                            Console.WriteLine("timer run: empty");
+                            //Console.WriteLine("timer run: empty");
                             continue;
                         }
                         wrapper = NewAndGetOld();
@@ -123,7 +123,7 @@ namespace ConsoleLogger
                             // }
                             // else
                             // {
-                            Console.WriteLine("timer run: output");
+                            //Console.WriteLine("timer run: output");
                                 Common.NativeWrite.WriteStdout(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
                             //}
                         }

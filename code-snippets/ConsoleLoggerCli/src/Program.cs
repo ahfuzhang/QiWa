@@ -32,6 +32,9 @@ internal static class Program {
     {
         Logger.Init(global::ConsoleLogger.LogLevel.Debug, 1000, new Dictionary<string, string>(){{"namespace","backend-team"}}, 1024*4);
         ThreadLocalLogger.Current.Info(Field.String("abc"u8, "1234"));
+        var l = Logger.Get();
+        l.Debug(Field.String("feildxx"u8, "wertyuiop"));
+        Logger.Return(l);
         Thread.Sleep(2001);
     }
 

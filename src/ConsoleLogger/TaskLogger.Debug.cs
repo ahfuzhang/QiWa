@@ -13,6 +13,7 @@ namespace ConsoleLogger
             {
                 return;
             }
+            //Console.WriteLine("Debug:{0}", System.Text.Encoding.UTF8.GetString(prefix.Bytes()));
             ThreadLocalLogger.Current.write1(prefix.Bytes(), ref field1, "debug", file, member, line);
         }
 
