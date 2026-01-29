@@ -37,4 +37,8 @@ add-package:
 fmt:
 	dotnet format QiWa.csproj
 
+logger-test:
+	dotnet test QiWa.csproj --filter "FullyQualifiedName~Tests.ConsoleLogger"
+
+
 .PHONY: test fmt
