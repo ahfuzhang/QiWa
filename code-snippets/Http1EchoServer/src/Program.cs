@@ -49,6 +49,8 @@ internal static class Program {
         var extraLabelsOption = new Option<string?>("-metrics.push.extra.labels", "Extra labels (a=b&c=d).");
         var maxThreadsOption = new Option<int?>("-threadpool.max", "ThreadPool max threads.");
         var outputRequestLogOption = new Option<bool>("-output.request.log", () => false, "Output request logs.");
+        var logBufferSizeKbOption = new Option<int>("-log.buffer.size.kb", () => 16, "Log buffer size (KB).");
+        var logFlushIntervalMsOption = new Option<int>("-log.flush.interval.ms", () => 1000, "Log flush interval (ms).");
 
         var root = new RootCommand("Http1EchoServer");
         root.AddOption(portOption);
@@ -57,6 +59,8 @@ internal static class Program {
         root.AddOption(extraLabelsOption);
         root.AddOption(maxThreadsOption);
         root.AddOption(outputRequestLogOption);
+        root.AddOption(logBufferSizeKbOption);
+        root.AddOption(logFlushIntervalMsOption);
 
         root.SetHandler(async (context) => {
             var port = context.ParseResult.GetValueForOption(portOption);
@@ -65,8 +69,10 @@ internal static class Program {
             var extraLabels = context.ParseResult.GetValueForOption(extraLabelsOption);
             var maxThreads = context.ParseResult.GetValueForOption(maxThreadsOption);
             var outputRequestLog = context.ParseResult.GetValueForOption(outputRequestLogOption);
+            var logBufferSizeKb = context.ParseResult.GetValueForOption(logBufferSizeKbOption);
+            var logFlushIntervalMs = context.ParseResult.GetValueForOption(logFlushIntervalMsOption);
 
-            await RunServerAsync(port, pushInterval, pushAddr, extraLabels, maxThreads, outputRequestLog);
+            await RunServerAsync(port, pushInterval, pushAddr, extraLabels, maxThreads, outputRequestLog, logBufferSizeKb, logFlushIntervalMs);
         });
 
         return await root.InvokeAsync(args);
@@ -78,7 +84,9 @@ internal static class Program {
         string? pushAddr,
         string? extraLabels,
         int? maxThreads,
-        bool outputRequestLog) {
+        bool outputRequestLog,
+        int logBufferSizeKb,
+        int logFlushIntervalMs) {
         // 1. ThreadPool
         if (maxThreads.HasValue) {
             ThreadPool.SetMinThreads(maxThreads.Value, maxThreads.Value);
@@ -115,11 +123,12 @@ internal static class Program {
         //     queueSize:1, 
         //     logBufferSize: 1024*16
         // );
+        var logBufferSizeBytes = logBufferSizeKb * 1024;
         ConsoleLogger.Logger.Init(
             global::ConsoleLogger.LogLevel.Debug, 
-            1000, 
+            logFlushIntervalMs, 
             new Dictionary<string, string>(){{"namespace","backend-team"}}, 
-            1024*16
+            logBufferSizeBytes
         );
 
         builder.WebHost.ConfigureKestrel(options => {
