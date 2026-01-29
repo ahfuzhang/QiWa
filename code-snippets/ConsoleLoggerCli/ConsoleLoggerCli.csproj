@@ -12,4 +12,11 @@
     <Compile Include="../../src/Common/**/*.cs" LinkBase="Common" />
     <Compile Include="../../src/ConsoleLogger/**/*.cs" LinkBase="ConsoleLogger" />
   </ItemGroup>
+  <PropertyGroup>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <EmbedAllSources>true</EmbedAllSources>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
 </Project>

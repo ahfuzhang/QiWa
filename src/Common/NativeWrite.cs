@@ -4,11 +4,13 @@ using System.Runtime.InteropServices;
 namespace Common {
     public static class NativeWrite {
         public static void WriteStdout(ReadOnlySpan<byte> data) {
+            Console.WriteLine($"ready write len: {data.Length}");
 #if WINDOWS
             WindowsWrite(data);
 #elif UNIX
             UnixWrite(data);
 #else
+            Console.WriteLine("PlatformNotSupportedException");
             throw new PlatformNotSupportedException();
 #endif
         }
@@ -22,6 +24,7 @@ namespace Common {
             unsafe {
                 fixed (byte* ptr = data) {
                     write(1, (IntPtr)ptr, (ulong)data.Length);
+                    Console.WriteLine($"write len: {data.Length}");
                 }
             }
         }

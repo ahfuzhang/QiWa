@@ -19,7 +19,7 @@ namespace ConsoleLogger
     public partial class ThreadLocalLogger
 
     {
-        internal static Action<ReadOnlySpan<byte>>? TestOutputCapture;
+        //internal static Action<ReadOnlySpan<byte>>? TestOutputCapture;
 
         private const int ReservedBufferLen = 1024;  // 预留的 buffer 长度
         internal BufferWrapper Buffer;
@@ -75,14 +75,14 @@ namespace ConsoleLogger
             {
                 try
                 {
-                    if (TestOutputCapture != null)
-                    {
-                        TestOutputCapture(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
-                    }
-                    else
-                    {
+                    // if (TestOutputCapture != null)
+                    // {
+                    //     TestOutputCapture(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
+                    // }
+                    // else
+                    // {
                         Common.NativeWrite.WriteStdout(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
-                    }
+                    //}
                 }
                 finally
                 {
@@ -99,6 +99,7 @@ namespace ConsoleLogger
             {
                 while (await flushTimer.WaitForNextTickAsync(Logger.Instance.LoggerToken.Token))
                 {
+                    Console.WriteLine("timer run");
                     // 检查退出信号，且等待定时器触发
                     BufferWrapper? wrapper;
                     lock (locker)
@@ -107,6 +108,7 @@ namespace ConsoleLogger
                         var rent = GetBuffer();
                         if (rent.Length == 0)
                         {
+                            Console.WriteLine("timer run: empty");
                             continue;
                         }
                         wrapper = NewAndGetOld();
@@ -115,14 +117,15 @@ namespace ConsoleLogger
                     {
                         try
                         {
-                            if (TestOutputCapture != null)
-                            {
-                                TestOutputCapture(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
-                            }
-                            else
-                            {
+                            // if (TestOutputCapture != null)
+                            // {
+                            //     TestOutputCapture(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
+                            // }
+                            // else
+                            // {
+                            Console.WriteLine("timer run: output");
                                 Common.NativeWrite.WriteStdout(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
-                            }
+                            //}
                         }
                         finally
                         {
