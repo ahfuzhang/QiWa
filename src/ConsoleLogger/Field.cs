@@ -151,6 +151,7 @@ namespace ConsoleLogger
             {
                 case FieldDataType.String:
                     rent.Append((byte)'"');
+                    // todo: 如果内容为空，应该跳过这个字段
                     rent.AppendAsJsonEscapedString(this.StringValue);
                     rent.Append((byte)'"');
                     break;
