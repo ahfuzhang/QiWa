@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build ConsoleLoggerCli",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/code-snippets/ConsoleLoggerCli/ConsoleLoggerCli.csproj",
+        "-p:DefineConstants=UNIX",
+        "-p:AllowUnsafeBlocks=true",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

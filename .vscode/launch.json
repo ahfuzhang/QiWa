@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ConsoleLoggerCli (coreclr)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build ConsoleLoggerCli",
+      "program": "${workspaceFolder}/code-snippets/ConsoleLoggerCli/bin/Debug/net10.0/ConsoleLoggerCli.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/code-snippets/ConsoleLoggerCli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    }
+  ]
+}
