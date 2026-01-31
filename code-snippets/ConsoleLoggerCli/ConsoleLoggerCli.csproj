@@ -7,10 +7,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../src/Common/**/*.cs" LinkBase="Common" />
     <Compile Include="../../src/ConsoleLogger/**/*.cs" LinkBase="ConsoleLogger" />
+    <Compile Include="../../src/Compress/**/*.cs" LinkBase="Compress" />
   </ItemGroup>
   <PropertyGroup>
     <DebugType>portable</DebugType>

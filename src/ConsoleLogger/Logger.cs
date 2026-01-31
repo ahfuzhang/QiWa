@@ -38,6 +38,7 @@ namespace ConsoleLogger
         internal readonly byte[] TagPrefix = [];
         internal readonly int LogBufferSize = defaultLogBufferSize;
         internal readonly CancellationTokenSource LoggerToken;
+        internal readonly string JsonLineUrl;
 
         internal static readonly ILogger DiagnosticsLogger = LoggerFactory.Create(builder =>
         {
@@ -51,9 +52,10 @@ namespace ConsoleLogger
 
         public static void Init(LogLevel level = LogLevel.Warn, int flushIntervalMs = 1000,
             Dictionary<string, string>? tags = null,
-            int logBufferSize = defaultLogBufferSize)
+            int logBufferSize = defaultLogBufferSize,
+            string jsonlineUrl="")
         {
-            Instance = new Logger(logBufferSize, tags);
+            Instance = new Logger(logBufferSize, tags, jsonlineUrl);
             Instance.Level = level;
             if (flushIntervalMs < minLogFlushIntervalMs)
             {
@@ -92,7 +94,7 @@ namespace ConsoleLogger
             }
         }
 
-        internal Logger(int logBufferSize, Dictionary<string, string>? tags)
+        internal Logger(int logBufferSize, Dictionary<string, string>? tags, string jsonlineUrl)
         {
             if (logBufferSize < minLogBufferSize)
             {
@@ -104,6 +106,7 @@ namespace ConsoleLogger
             {
                 TagPrefix = SetGlobalTags(tags);
             }
+            JsonLineUrl = jsonlineUrl;
             LoggerToken = new CancellationTokenSource();
             pool = new DefaultObjectPool<TaskLogger>(new BufferPolicy());
         }

@@ -30,7 +30,8 @@ internal static class Program {
 
     static void testLogger()
     {
-        Logger.Init(global::ConsoleLogger.LogLevel.Debug, 1000, new Dictionary<string, string>(){{"namespace","backend-team"}}, 1024*4);
+        const string url= "http://127.0.0.1:9428/insert/jsonline?_time_field=_time&_msg_field=_msg&_stream_fields=level&ignore_fields=&decolorize_fields=&AccountID=0&ProjectID=0&debug=false&extra_fields=";
+        Logger.Init(global::ConsoleLogger.LogLevel.Debug, 1000, new Dictionary<string, string>(){{"namespace","backend-team"}}, 1024*4, url);
         ThreadLocalLogger.Current.Info(Field.String("abc"u8, "1234"));
         var l = Logger.Get();
         l.Debug(Field.String("feildxx"u8, "wertyuiop"));

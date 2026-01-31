@@ -108,6 +108,7 @@ public sealed class MetricsPusher : IDisposable {
             Console.Error.WriteLine($"ERROR metrics push compress failed: code={error.Code} message={error.Message}");
             return;
         }
+        // todo: compressed 内存泄露
         int compressedLength = compressed.Length;
 
         // 3. Send

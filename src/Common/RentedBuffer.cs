@@ -34,8 +34,8 @@ namespace Common {
             if (Data != null) {
                 ArrayPool<byte>.Shared.Return(Data);
                 Data = null;
-                Length = 0;
             }
+            Length = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

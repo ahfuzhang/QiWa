@@ -176,7 +176,9 @@ namespace ConsoleLogger
                     rent.Append(this.PrimitiveValue.Uint64Value);
                     break;
                 case FieldDataType.DateTime:
+                    rent.Append((byte)'"');
                     rent.AppendUtcDatetime(this.PrimitiveValue.DateTimeValue);
+                    rent.Append((byte)'"');
                     break;
                 case FieldDataType.Float64:
                     rent.Append(this.PrimitiveValue.Float64Value);
