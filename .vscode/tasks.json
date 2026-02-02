@@ -18,6 +18,37 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "build ConsoleLoggerCli (remote)",
+      "type": "process",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--platform",
+        "linux/amd64",
+        "-v",
+        "${workspaceFolder}:/src",
+        "-w",
+        "/src",
+        "dotnet-dbg-container:latest",
+        "dotnet",
+        "build",
+        "-c Debug",
+        "/src/code-snippets/ConsoleLoggerCli/ConsoleLoggerCli.csproj",
+        "-p:DefineConstants=UNIX",
+        "-p:AllowUnsafeBlocks=true",
+        "-p:StripSymbols=false",
+        "-p:DebugSymbols=true",
+        "-p:DebugType=portable",
+        "-p:EmbedAllSources=true",
+        "-p:EmbedUntrackedSources=true",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
     }
   ]
 }

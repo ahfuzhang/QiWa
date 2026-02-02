@@ -11,6 +11,42 @@
       "cwd": "${workspaceFolder}/code-snippets/ConsoleLoggerCli",
       "stopAtEntry": false,
       "console": "integratedTerminal"
+    },
+    {
+      "name": "ConsoleLoggerCli (remote container)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build ConsoleLoggerCli (remote)",
+      "program": "/src/code-snippets/ConsoleLoggerCli/bin/Debug/net10.0/ConsoleLoggerCli.dll",
+      "args": [],
+      "cwd": "/src/code-snippets/ConsoleLoggerCli",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": [
+          "run",
+          "--rm",
+          "-i",
+          "--cap-add=SYS_PTRACE",
+          "--security-opt",
+          "seccomp=unconfined",
+          "--platform",
+          "linux/amd64",
+          "-v",
+          "${workspaceFolder}:/src",
+          "-w",
+          "/src",
+          "dotnet-dbg-container:latest",
+          "/bin/sh"
+        ],
+        "pipeCwd": "${workspaceFolder}",
+        "debuggerPath": "/usr/bin/vsdbg/vsdbg",
+        "quoteArgs": false
+      },
+      "sourceFileMap": {
+        "/src": "${workspaceFolder}"
+      }
     }
   ]
 }

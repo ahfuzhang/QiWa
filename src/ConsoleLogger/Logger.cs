@@ -107,6 +107,10 @@ namespace ConsoleLogger
                 TagPrefix = SetGlobalTags(tags);
             }
             JsonLineUrl = jsonlineUrl;
+            if (!Uri.TryCreate(JsonLineUrl, UriKind.Absolute, out _))
+            {
+                throw new ArgumentException("Invalid jsonlineUrl.", nameof(jsonlineUrl));
+            }
             LoggerToken = new CancellationTokenSource();
             pool = new DefaultObjectPool<TaskLogger>(new BufferPolicy());
         }

@@ -89,9 +89,11 @@ namespace ConsoleLogger
         {
             System.Diagnostics.Debug.Assert(httpClient!=null);
             System.Diagnostics.Debug.Assert(Logger.Instance!=null);
+            //Console.WriteLine("writeJsonline:");
             var (compressed, error) = Compress.ZstdCompressor.Compress(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
             if (error.Err())
             {
+                //Console.WriteLine("\twriteJsonline: Compress error");
                 return error;
             }
             try
@@ -100,12 +102,25 @@ namespace ConsoleLogger
                 using var content = new StreamContent(ms);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 content.Headers.ContentEncoding.Add("zstd");
-                using var response = await httpClient.PostAsync(Logger.Instance.JsonLineUrl, content, Logger.Instance.LoggerToken.Token);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new Common.Error { Code = 1, Message = $"response code={response.StatusCode}, url={Logger.Instance.JsonLineUrl}" };
+                //Console.WriteLine("\twriteJsonline: ready to post");
+                try {
+                    // see: https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.postasync?view=net-10.0#system-net-http-httpclient-postasync(system-uri-system-net-http-httpcontent)
+                    using var response = await httpClient.PostAsync(Logger.Instance.JsonLineUrl, content, Logger.Instance.LoggerToken.Token);
+                    //Console.WriteLine("\twriteJsonline: post end");
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        //Console.WriteLine("\twriteJsonline: post fail");
+                        return new Common.Error { Code = 1, Message = $"response code={response.StatusCode}, url={Logger.Instance.JsonLineUrl}" };
+                    }
+                    //Console.WriteLine("\twriteJsonline: post success");
+                    return default;
                 }
-                return default;
+                catch (Exception ex)when(
+                    ex is HttpRequestException ||
+                    ex is OperationCanceledException
+                ) {
+                    return new Common.Error { Code = 2, Message = $"exception={ex.Message}, url={Logger.Instance.JsonLineUrl}" };
+                }
             }
             finally
             {
@@ -120,11 +135,14 @@ namespace ConsoleLogger
             {
                 if (Logger.Instance.JsonLineUrl != "")
                 {
+                    //Console.WriteLine("writeLog: jsonline");
                     var err = await writeJsonline(wrapper);
                     if (!err.Err())
                     {
+                        //Console.WriteLine("\twriteLog: jsonline, success");
                         return;
                     }
+                    //Console.WriteLine("\twriteLog: jsonline, fail");
                     Logger.DiagnosticsLogger.LogError(null,
                         $"writeJsonline fail: code={err.Code}, msg={err.Message}");
                 }
@@ -144,6 +162,7 @@ namespace ConsoleLogger
             {
                 while (await flushTimer.WaitForNextTickAsync(Logger.Instance.LoggerToken.Token))
                 {
+                    //Console.WriteLine("run timer:");
                     // 检查退出信号，且等待定时器触发
                     BufferWrapper? wrapper;
                     lock (locker)
@@ -152,12 +171,14 @@ namespace ConsoleLogger
                         var rent = GetBuffer();
                         if (rent.Length == 0)
                         {
+                            //Console.WriteLine("\trun timer:no data");
                             continue;
                         }
                         wrapper = NewAndGetOld();
                     }
                     _ = Task.Run(async () =>
                     {
+                        //Console.WriteLine("\trun timer: writeLog");
                         await writeLog(wrapper);
                         wrapper = null;
                     });
@@ -165,8 +186,34 @@ namespace ConsoleLogger
             }
             catch (OperationCanceledException err)
             {
-                Logger.DiagnosticsLogger.LogError(err, "TimerLoop canceled. IsCancellationRequested={IsCancellationRequested}.", Logger.Instance.LoggerToken.IsCancellationRequested);
+                var exceptionLocation = GetExceptionLocation(err);
+                Logger.DiagnosticsLogger.LogError(err, "TimerLoop canceled. IsCancellationRequested={IsCancellationRequested}. ExceptionLocation={ExceptionLocation}.",
+                    Logger.Instance.LoggerToken.IsCancellationRequested, exceptionLocation);
             }
+        }
+
+        private static string GetExceptionLocation(Exception err)
+        {
+            if (err == null)
+            {
+                return string.Empty;
+            }
+            var trace = new StackTrace(err, true);
+            var frames = trace.GetFrames();
+            if (frames == null || frames.Length == 0)
+            {
+                return string.Empty;
+            }
+            foreach (var frame in frames)
+            {
+                var file = frame.GetFileName();
+                var line = frame.GetFileLineNumber();
+                if (!string.IsNullOrEmpty(file) && line > 0)
+                {
+                    return $"file={file}, line={line}";
+                }
+            }
+            return string.Empty;
         }
     }
 }

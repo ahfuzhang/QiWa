@@ -17,7 +17,7 @@ build-debug:
 
 # make run RUN_ARGS="-threadpool.max=1"
 run: build
-	$(DOTNET) run -r osx-arm64 -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true --project $(PROJECT) -- $(RUN_ARGS)
+	$(DOTNET) run -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true --project $(PROJECT) -- $(RUN_ARGS)
 
 install-debuger:
 	curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l ~/.vsdbg
