@@ -1,0 +1,21 @@
+FROM linuxserver/code-server:latest
+
+WORKDIR /tmp/code-server
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl unzip clang lld binutils zlib1g-dev wget make \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --channel 6.0 --install-dir /usr/share/dotnet
+
+RUN curl -sSL https://aka.ms/getvsdbgsh | /bin/sh /dev/stdin -v latest -l /usr/bin/vsdbg
+WORKDIR /tmp/netcoredbg
+RUN wget https://github.com/Samsung/netcoredbg/releases/download/3.1.3-1062/netcoredbg-linux-amd64.tar.gz \
+ && tar -zxf netcoredbg-linux-amd64.tar.gz -C /usr/bin/
+
+ENV DOTNET_ROOT="/usr/share/dotnet"
+ENV PATH="$DOTNET_ROOT:/usr/bin/vsdbg:/usr/bin/netcoredbg:${PATH}"
+
+#RUN dotnet tool install -g dotnet-dump && \
+#    dotnet tool install -g dotnet-trace

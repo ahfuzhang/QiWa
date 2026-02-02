@@ -3,3 +3,4 @@
 /bin/
 /obj/
 .netcoredbg_hist
+/.code-server/
