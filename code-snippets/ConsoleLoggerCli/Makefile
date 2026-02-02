@@ -1,3 +1,4 @@
+ROOT_DIR := $(abspath ../..)
 DOTNET ?= dotnet
 PRJ=ConsoleLoggerCli
 PROJECT ?= $(PRJ).csproj
@@ -49,3 +50,34 @@ linux-debug:
 
 fmt:
 	$(DOTNET) format
+
+build-linux-amd64:
+	docker run --rm \
+	--platform linux/amd64 \
+	-v "$(ROOT_DIR)":/src \
+	-w /src/code-snippets/$(PRJ) \
+	dotnet-dbg-container:latest \
+		dotnet publish $(PRJ).csproj \
+		-c Debug -r linux-x64 \
+		-p:StripSymbols=false \
+		-p:DebugSymbols=true -p:DebugType=portable \
+		-p:EmbedAllSources=true -p:EmbedUntrackedSources=true \
+		-p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
+		--self-contained false \
+		-o /src/build/code-snippets/$(PRJ)/linux/amd64
+
+run-dev-container:
+	docker run --rm -it \
+	--platform linux/amd64 \
+	-v "$(ROOT_DIR)":/src \
+	-w /src/code-snippets/$(PRJ) \
+	mcr.microsoft.com/dotnet/sdk:10.0 \
+	bash
+
+dbg:
+	docker run --rm -it \
+	--platform linux/amd64 \
+	-v "$(ROOT_DIR)":/src \
+	-w /src/build/code-snippets/$(PRJ)/linux/amd64/ \
+	dotnet-dbg-container:latest \
+	netcoredbg --interpreter=cli -- dotnet ./ConsoleLoggerCli.dll -threadpool.max=1
