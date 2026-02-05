@@ -1,0 +1,52 @@
+
+DOTNET := ~/.dotnet/dotnet
+
+ROOT_DIR := $(abspath ../..)
+PRJ=Http2EchoServer
+BUILD_DIR := $(ROOT_DIR)/build/code-snippets/$(PRJ)/linux/amd64/
+
+build:
+	$(DOTNET) publish $(PRJ).csproj \
+	  -r linux-x64 \
+	  -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
+	  -p:PublishAot=true \
+	  -p:StripSymbols=false \
+	  --self-contained true \
+	  -c Release -o $(BUILD_DIR)
+
+run-in-docker:
+	docker run -it --rm \
+	  --platform=linux/amd64 \
+	  --cpuset-cpus="8" \
+		-m 256m \
+	  -v $(BUILD_DIR):/app \
+	  --network=host \
+	  mcr.microsoft.com/dotnet/runtime:10.0 \
+	  /app/Http2EchoServer \
+	    -http2.port=8081 \
+		-http1.port=8082 \
+		-threadpool.max=1
+
+req:
+	curl -v --http2-prior-knowledge \
+		-H 'content-type: application/json' \
+		-d '{"hello":"world"}' \
+		http://127.0.0.1:8081/echo
+
+req_http1:
+	curl -v \
+		-H 'content-type: application/json' \
+		-d '{"hello":"world"}' \
+		http://127.0.0.1:8082/echo
+
+stress-test-http2:
+	docker run --rm -it --network host goodideal/nghttp2:latest \
+		h2load -p h2c -c 16 -t 8 --max-concurrent-streams 100 -n 10000000 \
+		http://127.0.0.1:8081/echo
+
+stress-test-http1:
+	docker run --rm -it --network host goodideal/nghttp2:latest \
+		h2load -p http/1.1 -c 500 -t 8 -n 1000000 \
+		http://127.0.0.1:8082/echo
+
+.PHONY: build run-in-docker

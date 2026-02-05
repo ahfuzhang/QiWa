@@ -40,5 +40,7 @@ fmt:
 logger-test:
 	dotnet test QiWa.csproj --filter "FullyQualifiedName~Tests.ConsoleLogger"
 
+install10:
+	./dotnet-install.sh --channel 10.0
 
 .PHONY: test fmt
