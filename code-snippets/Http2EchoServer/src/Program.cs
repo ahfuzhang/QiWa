@@ -100,6 +100,7 @@ internal static class Program {
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
         builder.WebHost.ConfigureKestrel(options => {
+            options.Limits.Http2.MaxStreamsPerConnection = 200;
             options.ListenAnyIP(port, listenOptions => {
                 listenOptions.Protocols = HttpProtocols.Http2;
             });

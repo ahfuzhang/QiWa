@@ -3,5 +3,6 @@
   "omnisharp.defaultLaunchSolution": "QiWa.sln",
   "files.associations": {
     "Makefile_*": "makefile"
-  }
+  },
+  "extensions.supportNodeGlobalNavigator": true
 }

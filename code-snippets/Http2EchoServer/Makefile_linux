@@ -17,36 +17,36 @@ build:
 run-in-docker:
 	docker run -it --rm \
 	  --platform=linux/amd64 \
-	  --cpuset-cpus="8" \
+	  --cpuset-cpus="19" \
 		-m 256m \
 	  -v $(BUILD_DIR):/app \
 	  --network=host \
 	  mcr.microsoft.com/dotnet/runtime:10.0 \
 	  /app/Http2EchoServer \
-	    -http2.port=8081 \
-		-http1.port=8082 \
+	    -http2.port=9081 \
+		-http1.port=9082 \
 		-threadpool.max=1
 
 req:
 	curl -v --http2-prior-knowledge \
 		-H 'content-type: application/json' \
 		-d '{"hello":"world"}' \
-		http://127.0.0.1:8081/echo
+		http://127.0.0.1:9081/echo
 
 req_http1:
 	curl -v \
 		-H 'content-type: application/json' \
 		-d '{"hello":"world"}' \
-		http://127.0.0.1:8082/echo
+		http://127.0.0.1:9082/echo
 
 stress-test-http2:
 	docker run --rm -it --network host goodideal/nghttp2:latest \
-		h2load -p h2c -c 16 -t 8 --max-concurrent-streams 100 -n 10000000 \
-		http://127.0.0.1:8081/echo
+		h2load -p h2c -c 16 -t 8 --max-concurrent-streams 60 -n 1000000 \
+		http://127.0.0.1:9081/echo?seq=8888
 
 stress-test-http1:
 	docker run --rm -it --network host goodideal/nghttp2:latest \
-		h2load -p http/1.1 -c 500 -t 8 -n 1000000 \
-		http://127.0.0.1:8082/echo
+		h2load -p http/1.1 -c 150 -t 8 -n 200000 \
+		http://127.0.0.1:9082/echo?seq=9999
 
 .PHONY: build run-in-docker
