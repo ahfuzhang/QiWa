@@ -3,6 +3,7 @@ FROM linuxserver/code-server:latest
 WORKDIR /tmp/code-server
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl unzip clang lld binutils zlib1g-dev wget make \
+                       nodejs npm ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && \
@@ -15,7 +16,10 @@ RUN wget https://github.com/Samsung/netcoredbg/releases/download/3.1.3-1062/netc
  && tar -zxf netcoredbg-linux-amd64.tar.gz -C /usr/bin/
 
 ENV DOTNET_ROOT="/usr/share/dotnet"
-ENV PATH="$DOTNET_ROOT:/usr/bin/vsdbg:/usr/bin/netcoredbg:${PATH}"
+ENV PATH="$DOTNET_ROOT:/usr/bin/vsdbg:/usr/bin/netcoredbg:/usr/share/dotnet/sdk/6.0.428:${PATH}"
 
 #RUN dotnet tool install -g dotnet-dump && \
 #    dotnet tool install -g dotnet-trace
+
+RUN dotnet tool install dotnet-trace --version 8.0.0 --tool-path /usr/share/dotnet/sdk/6.0.428/
+RUN npm install -g speedscope
