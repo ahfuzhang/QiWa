@@ -40,15 +40,16 @@ ARG EXTENSIONS="\
 USER root
 
 # 安装插件到固定目录（建议放到 /config/extensions，和该镜像的持久化逻辑一致）
-RUN mkdir -p /config/extensions \
+RUN export EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery"}' \
+  && mkdir -p /config/extensions \
   && for ext in $EXTENSIONS; do \
        echo "Installing $ext"; \
-       /usr/bin/code-server \
+       /app/code-server/bin/code-server \
          --extensions-dir /config/extensions \
          --install-extension "$ext" \
-         --force; \
+         --force \
+       || { echo "ERROR: failed to install extension: $ext" >&2; exit 1; }; \
      done \
   && chown -R abc:abc /config
 
 USER abc
-
