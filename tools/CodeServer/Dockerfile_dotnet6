@@ -23,3 +23,32 @@ ENV PATH="$DOTNET_ROOT:/usr/bin/vsdbg:/usr/bin/netcoredbg:/usr/share/dotnet/sdk/
 
 RUN dotnet tool install dotnet-trace --version 8.0.0 --tool-path /usr/share/dotnet/sdk/6.0.428/
 RUN npm install -g speedscope
+
+#####################
+# 你想预装的插件列表（扩展ID）
+ARG EXTENSIONS="\
+  ms-dotnettools.vscode-dotnet-runtime \
+  ms-dotnettools.csharp \
+  ms-dotnettools.csdevkit \
+  tamasfe.even-better-toml \
+  ms-vscode.makefile-tools \
+  jexus.netcoredbg \
+  redhat.vscode-yaml \
+"
+
+# linuxserver 镜像通常以 abc 用户运行；用 root 装完再把权限给回去更稳
+USER root
+
+# 安装插件到固定目录（建议放到 /config/extensions，和该镜像的持久化逻辑一致）
+RUN mkdir -p /config/extensions \
+  && for ext in $EXTENSIONS; do \
+       echo "Installing $ext"; \
+       /usr/bin/code-server \
+         --extensions-dir /config/extensions \
+         --install-extension "$ext" \
+         --force; \
+     done \
+  && chown -R abc:abc /config
+
+USER abc
+
