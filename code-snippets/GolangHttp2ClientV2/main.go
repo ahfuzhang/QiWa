@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"golang.org/x/net/http2"
 )
@@ -26,17 +27,19 @@ import (
 const latencyBase = 10 * time.Microsecond
 
 type runConfig struct {
-	threadCount       int
-	connectionCount   int
-	coroutinesPerConn int
-	duration          time.Duration
-	targetURL         string
+	threadCount       int           // 核数
+	connectionCount   int           // 连接数
+	coroutinesPerConn int           // 每个连接上的协程数
+	duration          time.Duration // 压测持续时间
+	targetURL         string        // 目标 url
 	parsedURL         *url.URL
 	seqPrefix         string
-	addr              string
-	checkOutput       bool
-	singleConnection  bool
-	strictMaxStreams  bool
+	addr              string // 解析后得到的 ip 和 端口
+	checkOutput       bool   // 检查 echo 服务的返回，确保真的被服务器处理了
+	singleConnection  bool   // 每个 http client 对象，限制只有一个 tcp 连接
+	strictMaxStreams  bool   //???  *singleConnection && !effectiveStrict
+	sendBufferBytes   int    // socket 的 send buffer
+	recvBufferBytes   int    // socket 的 recv buffer
 }
 
 type workerStats struct {
@@ -53,6 +56,7 @@ func newWorkerStats() *workerStats {
 	}
 }
 
+// 对延迟进行计数
 func (ws *workerStats) addLatency(d time.Duration) {
 	idx := latencyBucketIndex(d)
 	if idx >= len(ws.latencyBuckets) {
@@ -87,6 +91,8 @@ func parseConfig() (*runConfig, error) {
 	checkOutput := flag.Bool("check.output", true, "check response body contains seq")
 	singleConnection := flag.Bool("single.connection", false, "reuse a single TCP connection per http client")
 	strictMaxStreams := flag.Bool("strict.max.concurrent.streams", false, "block on server stream limit instead of dialing extra connections")
+	sendBufferBytes := flag.Int("send.buffer.bytes", 1<<20, "TCP send buffer size in bytes")
+	recvBufferBytes := flag.Int("recv.buffer.bytes", 1<<20, "TCP recv buffer size in bytes and HTTP/2 receive window size")
 	flag.Parse()
 
 	if *threadCount > 0 {
@@ -103,6 +109,12 @@ func parseConfig() (*runConfig, error) {
 	}
 	if *durationSeconds <= 0 {
 		return nil, fmt.Errorf("duration.seconds must be > 0")
+	}
+	if *sendBufferBytes <= 0 {
+		return nil, fmt.Errorf("send.buffer.bytes must be > 0")
+	}
+	if *recvBufferBytes <= 0 {
+		return nil, fmt.Errorf("recv.buffer.bytes must be > 0")
 	}
 	if *targetURL == "" {
 		flag.Usage()
@@ -134,6 +146,8 @@ func parseConfig() (*runConfig, error) {
 		checkOutput:       *checkOutput,
 		singleConnection:  *singleConnection,
 		strictMaxStreams:  effectiveStrict,
+		sendBufferBytes:   *sendBufferBytes,
+		recvBufferBytes:   *recvBufferBytes,
 	}, nil
 }
 
@@ -163,6 +177,7 @@ func buildSeqPrefix(u *url.URL) string {
 	return base + "?seq="
 }
 
+// 对 net.Conn 的包装
 type trackedConn struct {
 	net.Conn
 	closed atomic.Bool
@@ -193,6 +208,7 @@ func (c *trackedConn) isClosed() bool {
 	return c.closed.Load()
 }
 
+// 限制单个 tcp 连接
 func newSingleConnDialer(dialFunc func(ctx context.Context, network, addr string) (net.Conn, error), addr string) func(ctx context.Context, network string) (net.Conn, error) {
 	var (
 		mu   sync.Mutex
@@ -202,6 +218,7 @@ func newSingleConnDialer(dialFunc func(ctx context.Context, network, addr string
 		mu.Lock()
 		defer mu.Unlock()
 		if conn != nil && !conn.isClosed() {
+			// 如果闭包上已经有连接，就使用已有的连接
 			return conn, nil
 		}
 		c, err := dialFunc(ctx, network, addr)
@@ -213,26 +230,85 @@ func newSingleConnDialer(dialFunc func(ctx context.Context, network, addr string
 	}
 }
 
+// 设置 tcp 的发送和接收 buffer
+func configureTCPBuffers(conn net.Conn, sendBytes, recvBytes int) error {
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		return nil
+	}
+	if err := tcpConn.SetWriteBuffer(sendBytes); err != nil {
+		return fmt.Errorf("set TCP send buffer: %w", err)
+	}
+	if err := tcpConn.SetReadBuffer(recvBytes); err != nil {
+		return fmt.Errorf("set TCP recv buffer: %w", err)
+	}
+	return nil
+}
+
+// 构造一个 http client 对象
 func newHTTPClient(cfg *runConfig) (*http.Client, error) {
-	var dialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
-	if strings.EqualFold(cfg.parsedURL.Scheme, "https") {
-		tlsCfg := &tls.Config{
-			ServerName: cfg.parsedURL.Hostname(),
-			NextProtos: []string{"h2", "http/1.1"},
+	baseDialer := &net.Dialer{}
+	dialFunc := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := baseDialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
 		}
-		dialer := &tls.Dialer{Config: tlsCfg}
-		dialFunc = dialer.DialContext
-	} else {
-		dialer := &net.Dialer{}
-		dialFunc = dialer.DialContext
+		// 设置 socket 缓冲区
+		if err := configureTCPBuffers(conn, cfg.sendBufferBytes, cfg.recvBufferBytes); err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+		return conn, nil
 	}
 
-	tr := &http2.Transport{
-		AllowHTTP:                  true,
-		StrictMaxConcurrentStreams: cfg.strictMaxStreams,
+	// 不考虑 https 的情况
+	// var dialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
+	// if strings.EqualFold(cfg.parsedURL.Scheme, "https") {
+	// 	tlsCfg := &tls.Config{
+	// 		ServerName: cfg.parsedURL.Hostname(),
+	// 		NextProtos: []string{"h2", "http/1.1"},
+	// 	}
+	// 	dialFunc = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	// 		rawConn, err := rawDialFunc(ctx, network, addr)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		tlsConn := tls.Client(rawConn, tlsCfg)
+	// 		if err := tlsConn.HandshakeContext(ctx); err != nil {
+	// 			_ = rawConn.Close()
+	// 			return nil, err
+	// 		}
+	// 		return tlsConn, nil
+	// 	}
+	// } else {
+	// 	dialFunc = rawDialFunc
+	// }
+
+	http1Transport := &http.Transport{
+		HTTP2: &http.HTTP2Config{
+			MaxConcurrentStreams:          100,
+			MaxReceiveBufferPerConnection: cfg.recvBufferBytes,
+			MaxReceiveBufferPerStream:     cfg.recvBufferBytes,
+		},
 	}
+	// 得到一个 transport 对象
+	tr, err := http2.ConfigureTransports(http1Transport)
+	if err != nil {
+		return nil, fmt.Errorf("configure http2 transport: %w", err)
+	}
+	tr.AllowHTTP = true
+	// StrictMaxConcurrentStreams controls whether the server's
+	// SETTINGS_MAX_CONCURRENT_STREAMS should be respected
+	// globally. If false, new TCP connections are created to the
+	// server as needed to keep each under the per-connection
+	// SETTINGS_MAX_CONCURRENT_STREAMS limit. If true, the
+	// server's SETTINGS_MAX_CONCURRENT_STREAMS is interpreted as
+	// a global limit and callers of RoundTrip block when needed,
+	// waiting for their turn.
+	//tr.StrictMaxConcurrentStreams = cfg.strictMaxStreams
+	tr.StrictMaxConcurrentStreams = true // 当达到 SETTINGS_MAX_CONCURRENT_STREAMS 是，进行阻塞
 	if cfg.singleConnection {
-		dialOnce := newSingleConnDialer(dialFunc, cfg.addr)
+		dialOnce := newSingleConnDialer(dialFunc /*传入 dail 函数*/, cfg.addr)
 		tr.DialTLSContext = func(ctx context.Context, network, _ string, _ *tls.Config) (net.Conn, error) {
 			return dialOnce(ctx, network)
 		}
@@ -248,11 +324,13 @@ func newHTTPClient(cfg *runConfig) (*http.Client, error) {
 	}, nil
 }
 
-func buildSeqURL(prefix string, seq int64, buf []byte) (string, []byte) {
+func buildSeqURL(prefix string, seq int64, buf []byte) (string, []byte /*预防扩容的情况*/) {
 	buf = buf[:0]
 	buf = append(buf, prefix...)
 	buf = strconv.AppendInt(buf, seq, 10)
-	return string(buf), buf
+	//next := buf[len(buf):]
+	// 按照提示词意图：这里使用 unsafe 做 []byte -> string 的无拷贝转换，减少一次分配。
+	return unsafe.String(unsafe.SliceData(buf), len(buf)), buf
 }
 
 func runWorker(ctx context.Context, client *http.Client, prefix string, seq *atomic.Int64, ws *workerStats, checkOutput bool) {
@@ -265,8 +343,8 @@ func runWorker(ctx context.Context, client *http.Client, prefix string, seq *ato
 		}
 		//currentSeq := seq.Add(1)
 		currentSeq++
-		urlStr, nextBuf := buildSeqURL(prefix, currentSeq, urlBuf)
-		urlBuf = nextBuf
+		var urlStr string
+		urlStr, urlBuf = buildSeqURL(prefix, currentSeq, urlBuf)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 		if err != nil {
 			log.Println(err.Error())
@@ -420,6 +498,7 @@ func printReport(elapsed time.Duration, stats *workerStats) {
 	}
 }
 
+// 构造 http client
 func buildClients(cfg *runConfig) ([]*http.Client, error) {
 	clients := make([]*http.Client, cfg.connectionCount)
 	for i := 0; i < cfg.connectionCount; i++ {

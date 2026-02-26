@@ -26,13 +26,27 @@ build-linux-amd64:
 		apt-get update && \
 		apt-get install -y --no-install-recommends clang lld binutils zlib1g-dev && \
 		dotnet publish $(PRJ).csproj \
-		-c Release -r linux-x64 \
+		-c Debug -r linux-x64 \
 		-p:PublishAot=true \
 		-p:StripSymbols=false \
 		-p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
-		--self-contained true \
+		--self-contained false \
 		-o /src/build/code-snippets/$(PRJ)/linux/amd64 \
 		'
+
+build-linux-amd64-1:
+	docker run --rm \
+	--platform linux/amd64 \
+	-v "$(ROOT_DIR)":/src \
+	-w /src/code-snippets/$(PRJ) \
+	mcr.microsoft.com/dotnet/sdk:10.0 \
+	dotnet build $(PRJ).csproj \
+		-c Debug -r linux-x64 \
+		-p:PublishAot=true \
+		-p:StripSymbols=false \
+		-p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
+		-o /src/build/code-snippets/$(PRJ)/linux/amd64
+		
 
 build-macos:
 	dotnet publish $(PRJ).csproj -c Release -r osx-arm64 -p:PublishAot=true --self-contained true -o $(BUILD_DIR)/osx/arm64
