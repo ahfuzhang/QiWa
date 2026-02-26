@@ -41,12 +41,12 @@ req_http1:
 
 stress-test-http2:
 	docker run --rm -it --network host goodideal/nghttp2:latest \
-		h2load -p h2c -c 16 -t 8 --max-concurrent-streams 60 -n 1000000 \
+		h2load -p h2c -c 8 -t 8 --max-concurrent-streams 60 -n 1000000 \
 		http://127.0.0.1:9081/echo?seq=8888
 
 stress-test-http1:
 	docker run --rm -it --network host goodideal/nghttp2:latest \
-		h2load -p http/1.1 -c 150 -t 8 -n 200000 \
+		h2load -p http/1.1 -c 120 -t 8 -n 2000000 \
 		http://127.0.0.1:9082/echo?seq=9999
 
 .PHONY: build run-in-docker

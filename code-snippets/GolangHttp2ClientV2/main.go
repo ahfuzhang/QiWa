@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -55,6 +56,8 @@ func newWorkerStats() *workerStats {
 		latencyBuckets: make([]int64, 32),
 	}
 }
+
+var dailCount atomic.Int64
 
 // 对延迟进行计数
 func (ws *workerStats) addLatency(d time.Duration) {
@@ -110,11 +113,11 @@ func parseConfig() (*runConfig, error) {
 	if *durationSeconds <= 0 {
 		return nil, fmt.Errorf("duration.seconds must be > 0")
 	}
-	if *sendBufferBytes <= 0 {
-		return nil, fmt.Errorf("send.buffer.bytes must be > 0")
+	if *sendBufferBytes < 0 {
+		return nil, fmt.Errorf("send.buffer.bytes must be >= 0")
 	}
-	if *recvBufferBytes <= 0 {
-		return nil, fmt.Errorf("recv.buffer.bytes must be > 0")
+	if *recvBufferBytes < 0 {
+		return nil, fmt.Errorf("recv.buffer.bytes must be >= 0")
 	}
 	if *targetURL == "" {
 		flag.Usage()
@@ -236,11 +239,15 @@ func configureTCPBuffers(conn net.Conn, sendBytes, recvBytes int) error {
 	if !ok {
 		return nil
 	}
-	if err := tcpConn.SetWriteBuffer(sendBytes); err != nil {
-		return fmt.Errorf("set TCP send buffer: %w", err)
+	if sendBytes > 0 {
+		if err := tcpConn.SetWriteBuffer(sendBytes); err != nil {
+			return fmt.Errorf("set TCP send buffer: %w", err)
+		}
 	}
-	if err := tcpConn.SetReadBuffer(recvBytes); err != nil {
-		return fmt.Errorf("set TCP recv buffer: %w", err)
+	if recvBytes > 0 {
+		if err := tcpConn.SetReadBuffer(recvBytes); err != nil {
+			return fmt.Errorf("set TCP recv buffer: %w", err)
+		}
 	}
 	return nil
 }
@@ -253,6 +260,7 @@ func newHTTPClient(cfg *runConfig) (*http.Client, error) {
 		if err != nil {
 			return nil, err
 		}
+		dailCount.Add(1)
 		// 设置 socket 缓冲区
 		if err := configureTCPBuffers(conn, cfg.sendBufferBytes, cfg.recvBufferBytes); err != nil {
 			_ = conn.Close()
@@ -284,37 +292,44 @@ func newHTTPClient(cfg *runConfig) (*http.Client, error) {
 	// 	dialFunc = rawDialFunc
 	// }
 
-	http1Transport := &http.Transport{
-		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams:          100,
-			MaxReceiveBufferPerConnection: cfg.recvBufferBytes,
-			MaxReceiveBufferPerStream:     cfg.recvBufferBytes,
-		},
+	// http1Transport := &http.Transport{
+	// 	HTTP2: &http.HTTP2Config{
+	// 		MaxConcurrentStreams:          100,
+	// 		MaxReceiveBufferPerConnection: cfg.recvBufferBytes,
+	// 		MaxReceiveBufferPerStream:     cfg.recvBufferBytes,
+	// 	},
+	// }
+	// // 得到一个 transport 对象
+	// tr, err := http2.ConfigureTransports(http1Transport)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("configure http2 transport: %w", err)
+	// }
+	// tr.AllowHTTP = true
+	// // StrictMaxConcurrentStreams controls whether the server's
+	// // SETTINGS_MAX_CONCURRENT_STREAMS should be respected
+	// // globally. If false, new TCP connections are created to the
+	// // server as needed to keep each under the per-connection
+	// // SETTINGS_MAX_CONCURRENT_STREAMS limit. If true, the
+	// // server's SETTINGS_MAX_CONCURRENT_STREAMS is interpreted as
+	// // a global limit and callers of RoundTrip block when needed,
+	// // waiting for their turn.
+	// //tr.StrictMaxConcurrentStreams = cfg.strictMaxStreams
+	// tr.StrictMaxConcurrentStreams = true // 当达到 SETTINGS_MAX_CONCURRENT_STREAMS 是，进行阻塞
+	tr := &http2.Transport{
+		AllowHTTP:                  true,
+		StrictMaxConcurrentStreams: true,
 	}
-	// 得到一个 transport 对象
-	tr, err := http2.ConfigureTransports(http1Transport)
-	if err != nil {
-		return nil, fmt.Errorf("configure http2 transport: %w", err)
-	}
-	tr.AllowHTTP = true
-	// StrictMaxConcurrentStreams controls whether the server's
-	// SETTINGS_MAX_CONCURRENT_STREAMS should be respected
-	// globally. If false, new TCP connections are created to the
-	// server as needed to keep each under the per-connection
-	// SETTINGS_MAX_CONCURRENT_STREAMS limit. If true, the
-	// server's SETTINGS_MAX_CONCURRENT_STREAMS is interpreted as
-	// a global limit and callers of RoundTrip block when needed,
-	// waiting for their turn.
-	//tr.StrictMaxConcurrentStreams = cfg.strictMaxStreams
-	tr.StrictMaxConcurrentStreams = true // 当达到 SETTINGS_MAX_CONCURRENT_STREAMS 是，进行阻塞
+
 	if cfg.singleConnection {
 		dialOnce := newSingleConnDialer(dialFunc /*传入 dail 函数*/, cfg.addr)
 		tr.DialTLSContext = func(ctx context.Context, network, _ string, _ *tls.Config) (net.Conn, error) {
 			return dialOnce(ctx, network)
 		}
 	} else {
+		dialer := &net.Dialer{}
 		tr.DialTLSContext = func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-			return dialFunc(ctx, network, addr)
+			dailCount.Add(1)
+			return dialer.DialContext(ctx, network, addr)
 		}
 	}
 
@@ -356,6 +371,11 @@ func runWorker(ctx context.Context, client *http.Client, prefix string, seq *ato
 		if err != nil {
 			if ctx.Err() != nil {
 				return
+			}
+			if errors.Is(err, http2.ErrNoCachedConn) {
+				// 忽略掉因为不能建立新连接而报的错误
+				ws.errors++
+				continue
 			}
 			log.Println(err.Error())
 			ws.errors++
@@ -463,6 +483,7 @@ func printReport(elapsed time.Duration, stats *workerStats) {
 	fmt.Printf("Duration: %s\n", elapsed.Truncate(time.Millisecond))
 	fmt.Printf("Total requests: %d\n", stats.total)
 	fmt.Printf("Errors: %d\n", stats.errors)
+	fmt.Printf("Dail count: %d\n", dailCount.Load())
 
 	if len(stats.codeCounts) > 0 {
 		fmt.Println("Status QPS:")

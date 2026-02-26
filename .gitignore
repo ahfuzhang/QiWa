@@ -4,3 +4,4 @@
 /obj/
 .netcoredbg_hist
 /.code-server/
+/doc/prompt.log

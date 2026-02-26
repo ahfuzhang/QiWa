@@ -100,7 +100,12 @@ internal static class Program {
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
         builder.WebHost.ConfigureKestrel(options => {
-            options.Limits.Http2.MaxStreamsPerConnection = 200;
+            // see: https://learn.microsoft.com/zh-cn/dotnet/api/microsoft.aspnetcore.server.kestrel.core.http2limits?view=aspnetcore-9.0
+            options.Limits.Http2.MaxStreamsPerConnection = 200;  // 每个连接上允许的最多的流的数量
+            // 根据提示词意图调大 HTTP/2 流级别接收窗口，减少高并发/高带宽时的流控等待，提升服务器吞吐量。
+            options.Limits.Http2.InitialStreamWindowSize = 8 * 1024 * 1024;
+            // 根据提示词意图调大 HTTP/2 连接级别接收窗口，配合流级别窗口提升整体数据吞吐能力。
+            options.Limits.Http2.InitialConnectionWindowSize = 16 * 1024 * 1024;
             options.ListenAnyIP(port, listenOptions => {
                 listenOptions.Protocols = HttpProtocols.Http2;
             });

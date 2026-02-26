@@ -25,7 +25,7 @@ const (
 	latencyBase           = 10 * time.Microsecond
 	preface               = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 	defaultWindowSize     = 65535
-	initialWindowSize     = 1 << 20
+	initialWindowSize     = 1 << 20 // 1mb 的初始化窗口大小
 	windowUpdateThreshold = 32 << 10
 	spinSleep             = 100 * time.Microsecond
 	maxPrintResponses     = 10
@@ -33,18 +33,18 @@ const (
 )
 
 type runConfig struct {
-	threadCount          int
-	connectionCount      int
-	duration             time.Duration
-	targetURL            string
-	parsedURL            *url.URL
-	addr                 string
-	scheme               string
-	authority            string
+	threadCount          int           // 线程数
+	connectionCount      int           // 连接数
+	duration             time.Duration // 压测时长
+	targetURL            string        // 目标 url
+	parsedURL            *url.URL      // 解析后的 url
+	addr                 string        // ip:port
+	scheme               string        // parsedURL.Scheme,
+	authority            string        // parsedURL.Host,
 	seqPathPrefix        string
-	checkOutput          bool
-	showResponse         bool
-	maxConcurrentStreams int
+	checkOutput          bool // 是否检查 echo 的结果
+	showResponse         bool // 是否展示相应内容
+	maxConcurrentStreams int  //
 	printBudget          atomic.Int64
 }
 
@@ -86,7 +86,7 @@ type connWorker struct {
 	encBuf         bytes.Buffer
 	headerBuf      bytes.Buffer
 	stats          *workerStats
-	streams        map[uint32]*streamState
+	streams        map[uint32]*streamState // ??? 为什么要记录在这里
 	mu             sync.Mutex
 	writeMu        sync.Mutex
 	outstanding    atomic.Int64
@@ -106,7 +106,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	workers, err := buildWorkers(cfg)
+	workers, err := buildWorkers(cfg) // 多个 tcp 客户端的对象
 	if err != nil {
 		log.Fatalf("failed to build workers: %v", err)
 	}
@@ -251,9 +251,11 @@ func latencyBucketIndex(d time.Duration) int {
 	return bits.Len64(uint64(ratio - 1))
 }
 
+// 构建客户端
 func buildWorkers(cfg *runConfig) ([]*connWorker, error) {
 	workers := make([]*connWorker, 0, cfg.connectionCount)
 	for i := 0; i < cfg.connectionCount; i++ {
+		// 建立 n 个连接
 		w, err := newConnWorker(i, cfg)
 		if err != nil {
 			for _, cw := range workers {
@@ -266,6 +268,7 @@ func buildWorkers(cfg *runConfig) ([]*connWorker, error) {
 	return workers, nil
 }
 
+// 建立 tcp 客户端
 func newConnWorker(id int, cfg *runConfig) (*connWorker, error) {
 	conn, err := (&net.Dialer{}).Dial("tcp", cfg.addr)
 	if err != nil {
@@ -283,11 +286,12 @@ func newConnWorker(id int, cfg *runConfig) (*connWorker, error) {
 	}
 	cw.enc = hpack.NewEncoder(&cw.encBuf)
 	cw.dec = hpack.NewDecoder(4096, nil)
-
+	// 发送握手信息
 	if err := writeAll(conn, []byte(preface)); err != nil {
 		_ = conn.Close()
 		return nil, err
 	}
+	// 初始化设置
 	if err := cw.writeSettings(); err != nil {
 		_ = conn.Close()
 		return nil, err
@@ -318,6 +322,7 @@ func (cw *connWorker) writeSettings() error {
 	return cw.fr.WriteSettings(
 		http2.Setting{ID: http2.SettingEnablePush, Val: 0},
 		http2.Setting{ID: http2.SettingInitialWindowSize, Val: uint32(initialWindowSize)},
+		http2.Setting{ID: http2.SettingMaxConcurrentStreams, Val: uint32(200)},
 	)
 }
 
@@ -341,6 +346,7 @@ func runBenchmark(ctx context.Context, workers []*connWorker) benchResult {
 	var wg sync.WaitGroup
 	for _, w := range workers {
 		wg.Add(2)
+		// 每个 tcp client 有两个协程
 		go w.sendLoop(ctx, &wg)
 		go w.recvLoop(ctx, &wg)
 	}
@@ -371,8 +377,8 @@ func (cw *connWorker) sendLoop(ctx context.Context, wg *sync.WaitGroup) {
 		}
 
 		seq++
-		pathStr, nextBuf := buildSeqPath(cw.cfg.seqPathPrefix, seq, pathBuf)
-		pathBuf = nextBuf
+		var pathStr string
+		pathStr, pathBuf = buildSeqPath(cw.cfg.seqPathPrefix, seq, pathBuf)
 
 		streamID := cw.nextStreamID
 		cw.nextStreamID += 2
@@ -383,13 +389,13 @@ func (cw *connWorker) sendLoop(ctx context.Context, wg *sync.WaitGroup) {
 		}
 		state.reset(seq, time.Now(), cw.cfg.checkOutput, capture)
 		cw.addStream(streamID, state)
-
+		// 发出一个请求
 		if err := cw.writeHeaders(streamID, pathStr); err != nil {
 			cw.recordError(err)
 			if capture {
 				cw.cfg.releasePrintSlot()
 			}
-			cw.removeStream(streamID)
+			cw.removeStream(streamID) // 出错的时候删除 stream
 			streamPool.Put(state)
 			continue
 		}
@@ -397,6 +403,7 @@ func (cw *connWorker) sendLoop(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+// 收包的协程
 func (cw *connWorker) recvLoop(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer func() { _ = cw.conn.Close() }()
@@ -413,6 +420,7 @@ func (cw *connWorker) recvLoop(ctx context.Context, wg *sync.WaitGroup) {
 		}
 
 		_ = cw.conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		// 读出一个 frame
 		f, err := cw.fr.ReadFrame()
 		if err != nil {
 			if ne, ok := err.(net.Error); ok && ne.Timeout() {
@@ -424,6 +432,7 @@ func (cw *connWorker) recvLoop(ctx context.Context, wg *sync.WaitGroup) {
 			cw.recordError(err)
 			return
 		}
+		// 判断 stream 状态，删除已经登记的 stream
 		cw.handleFrame(f)
 	}
 }
@@ -437,6 +446,7 @@ func (cw *connWorker) currentLimit() int64 {
 	return max
 }
 
+// 构造 get 请求
 func (cw *connWorker) buildHeaderBlock(path string) []byte {
 	cw.encBuf.Reset()
 	_ = cw.enc.WriteField(hpack.HeaderField{Name: ":method", Value: "GET"})
@@ -595,7 +605,7 @@ func (cw *connWorker) decodeStatus(block []byte) (int, error) {
 
 func (cw *connWorker) addStream(streamID uint32, st *streamState) {
 	cw.mu.Lock()
-	cw.streams[streamID] = st
+	cw.streams[streamID] = st // 每个 stream id 对应一个状态对象
 	cw.mu.Unlock()
 }
 
@@ -606,6 +616,7 @@ func (cw *connWorker) getStream(streamID uint32) *streamState {
 	return st
 }
 
+// 这里删除 stream
 func (cw *connWorker) removeStream(streamID uint32) *streamState {
 	cw.mu.Lock()
 	st := cw.streams[streamID]
@@ -615,7 +626,7 @@ func (cw *connWorker) removeStream(streamID uint32) *streamState {
 }
 
 func (cw *connWorker) finishStream(streamID uint32) {
-	st := cw.removeStream(streamID)
+	st := cw.removeStream(streamID) // 删除 stream
 	if st == nil {
 		return
 	}
@@ -794,6 +805,7 @@ func buildSeqPath(prefix string, seq int64, buf []byte) (string, []byte) {
 	buf = buf[:0]
 	buf = append(buf, prefix...)
 	buf = strconv.AppendInt(buf, seq, 10)
+	// 按本次提示词意图：修复 make run 触发的 HPACK panic，必须返回稳定字符串，避免复用缓冲区导致 key 被篡改。
 	return string(buf), buf
 }
 

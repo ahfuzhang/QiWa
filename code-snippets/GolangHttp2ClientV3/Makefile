@@ -11,10 +11,12 @@ run:
 	$(BIN_DIR)/$(BINARY) \
 	    -thread.count=8 \
 		-connection.count=16 \
-		-max.concurrent.streams=100 \
+		-max.concurrent.streams=87 \
 		-target.url=http://localhost:9081/echo \
-		-duration.seconds=10 \
-		-check.output=false
+		-duration.seconds=20 \
+		-check.output=false \
+		-show.response=false
+
 
 clean:
 	rm -rf $(BIN_DIR)
