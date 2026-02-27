@@ -1,0 +1,15 @@
+2026-02-27 09:30:23 +0800 | 当前项目，在 vscode 中无法实现代码跳转，请解决
+2026-02-27 09:38:01 +0800 | 当前项目中，请指定 dotnet 命令行的路径为 ~/.dotnet/dotnet
+2026-02-27 09:42:00 +0800 | 我希望你修改 .vscode/ 目录下的配置，当 vscode 需要 dotnet sdk 时，使用 ~/.dotnet/dotnet 这个路径下的 sdk
+2026-02-27 09:53:05 +0800 | 当前项目仍然无法实现代码跳转
+2026-02-27 09:58:30 +0800 | 选中的代码发现一个问题：如果发现不支持 Trailer 这个特性，是不是应该返回一个错误信息? | file=src/GrpcEchoServer/GrpcTrailerWriter.cs:24
+2026-02-27 10:15:12 +0800 | 选中的位置：我希望限制请求 body 最长为 10mb。这里提前检查 body ，拒绝掉太长的请求。 | file=src/GrpcEchoServer/GrpcEchoRequestHandler.cs:39
+2026-02-27 10:21:10 +0800 | 选中的位置，能不能直接检查 content-length 一类的 header? 不用等到读内容再判断大小 | file=src/GrpcEchoServer/GrpcEchoRequestHandler.cs:49
+2026-02-27 10:24:22 +0800 | 选中的行，请回答我的问题 | file=src/GrpcEchoServer/GrpcEchoRequestHandler.cs:51
+2026-02-27 10:30:21 +0800 | 选中的两行，功能冗余了。 如果已经申请了最大内存用于保存 body，则没必要再使用 MemoryStream 再拷贝一次了。 请精简这里的逻辑，减少拷贝 | file=src/GrpcEchoServer/GrpcUnaryFrameCodec.cs:84
+2026-02-27 10:35:04 +0800 | 这个函数还是太复杂了，既然已经知道了 content-length，为什么不传入 content-length，直接按照需要读取就好了。 | file=src/GrpcEchoServer/GrpcUnaryFrameCodec.cs:79
+2026-02-27 13:23:07 +0800 | 请在当前的 shell 中，用命令测试当前 linux 服务器是否支持 io_uring
+2026-02-27 13:24:16 +0800 | 请用命令探测当前 linux 支持 huge page 的配置情况
+2026-02-27 13:26:25 +0800 | 在当前 linux 服务器上，可以用 api 申请到 huge page 的内存页吗?
+2026-02-27 13:27:48 +0800 | "当前机器可以通过 THP 方式申请到 huge page" THP 是什么意思?
+2026-02-27 13:28:52 +0800 | "内核自动把普通内存页合并成大页" 用这种方法，是否对于 tlb miss 的情况是没有优化的？

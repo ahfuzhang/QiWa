@@ -35,21 +35,21 @@ internal sealed class GrpcRequestValidator {
             errorMessage = "gRPC request must use POST.";
             return false;
         }
-
+        // 校验 stream id
         if (!TryValidateStreamId(context, out errorMessage)) {
             return false;
         }
-
+        // 校验 content-type
         if (!HasGrpcContentType(request.ContentType)) {
             errorMessage = "content-type must be application/grpc.";
             return false;
         }
-
+        // 请求路径
         if (!string.Equals(request.Path.Value, GrpcProtocolConstants.ServicePath, StringComparison.Ordinal)) {
             errorMessage = $"path must be {GrpcProtocolConstants.ServicePath}.";
             return false;
         }
-
+        // 是否压缩
         if (!IsSupportedGrpcEncoding(request.Headers[GrpcProtocolConstants.GrpcEncodingHeader])) {
             errorMessage = "grpc-encoding is unsupported, only identity is allowed.";
             return false;
@@ -105,7 +105,7 @@ internal sealed class GrpcRequestValidator {
         if (string.IsNullOrWhiteSpace(grpcEncoding)) {
             return true;
         }
-
+        // Identity 在这里是“编码名称”，含义是“不压缩”（plain/uncompressed）。
         return string.Equals(grpcEncoding, GrpcProtocolConstants.IdentityEncoding, StringComparison.OrdinalIgnoreCase);
     }
 }

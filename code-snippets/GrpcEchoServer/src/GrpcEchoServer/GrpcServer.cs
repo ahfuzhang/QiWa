@@ -37,6 +37,7 @@ internal sealed class GrpcServer {
 
         builder.Logging.ClearProviders();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
+        // 配置 kestrel 服务器
         builder.WebHost.ConfigureKestrel(options => {
             options.ListenAnyIP(port, listenOptions => {
                 listenOptions.Protocols = HttpProtocols.Http2;
@@ -44,7 +45,7 @@ internal sealed class GrpcServer {
         });
 
         var app = builder.Build();
-        app.Run(_requestHandler.HandleAsync);
+        app.Run(_requestHandler.HandleAsync);  // 配置了整个 kestrel 的回调
 
         using var cts = new CancellationTokenSource();
         using var sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context => {

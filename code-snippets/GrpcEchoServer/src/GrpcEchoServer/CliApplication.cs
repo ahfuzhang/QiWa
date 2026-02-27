@@ -37,7 +37,7 @@ internal sealed class CliApplication {
         root.AddOption(_http2PortOption);
         root.SetHandler(async (InvocationContext context) => {
             int port = context.ParseResult.GetValueForOption(_http2PortOption);
-            await _grpcServer.RunAsync(port);
+            await _grpcServer.RunAsync(port);  // 命令行解析完成后，启动 grpc 服务
         });
         return await root.InvokeAsync(args);
     }

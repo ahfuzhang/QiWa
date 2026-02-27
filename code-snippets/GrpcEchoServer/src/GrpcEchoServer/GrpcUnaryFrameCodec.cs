@@ -16,16 +16,37 @@ internal static class GrpcUnaryFrameCodec {
     private const int GrpcHeaderLength = 5;
 
     /// <summary>
+    /// 读取请求体时使用的缓冲区大小。
+    /// </summary>
+    private const int ReadBufferSize = 16 * 1024;
+
+    /// <summary>
     /// 读取并解析一个 unary 请求消息。
     /// </summary>
     /// <param name="body">请求体流。</param>
+    /// <param name="contentLength">请求头声明的请求体长度。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>解析结果。</returns>
-    public static async Task<GrpcReadResult> TryReadSingleMessageAsync(Stream body, CancellationToken cancellationToken) {
-        using var ms = new MemoryStream();
-        await body.CopyToAsync(ms, cancellationToken);
-        byte[] frameBytes = ms.ToArray();
+    public static async Task<GrpcReadResult> TryReadSingleMessageAsync(Stream body, int contentLength, CancellationToken cancellationToken) {
+        if (contentLength < 0) {
+            return GrpcReadResult.Fail("content-length must be non-negative.");
+        }
 
+        byte[] frameBytes = new byte[contentLength];
+        bool readSucceeded = await TryReadByContentLengthAsync(body, frameBytes, cancellationToken);
+        if (!readSucceeded) {
+            return GrpcReadResult.Fail("invalid grpc frame: request body ended before content-length was satisfied.");
+        }
+
+        return TryDecodeSingleMessage(frameBytes);
+    }
+
+    /// <summary>
+    /// 将完整帧字节解码为 protobuf 负载。
+    /// </summary>
+    /// <param name="frameBytes">完整 gRPC 帧字节。</param>
+    /// <returns>解析结果。</returns>
+    private static GrpcReadResult TryDecodeSingleMessage(byte[] frameBytes) {
         if (frameBytes.Length < GrpcHeaderLength) {
             return GrpcReadResult.Fail("invalid grpc frame: header length is too short.");
         }
@@ -46,6 +67,30 @@ internal static class GrpcUnaryFrameCodec {
 
         byte[] payload = frameBytes.AsSpan(GrpcHeaderLength, messageLength).ToArray();
         return GrpcReadResult.Success(payload);
+    }
+
+    /// <summary>
+    /// 按 Content-Length 读取请求体，避免额外的中转内存拷贝。
+    /// </summary>
+    /// <param name="body">请求体流。</param>
+    /// <param name="bodyBytes">目标请求体缓冲区。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>是否完整读取到 Content-Length 指定的字节数。</returns>
+    private static async Task<bool> TryReadByContentLengthAsync(Stream body, byte[] bodyBytes, CancellationToken cancellationToken) {
+        // 根据提示词意图：调用方已拿到 Content-Length，这里按精确长度读取，减少不必要的复杂分支。
+        int totalRead = 0;
+        while (totalRead < bodyBytes.Length) {
+            int remainingBytes = bodyBytes.Length - totalRead;
+            int bytesToRead = Math.Min(ReadBufferSize, remainingBytes);
+            int bytesRead = await body.ReadAsync(bodyBytes.AsMemory(totalRead, bytesToRead), cancellationToken);
+            if (bytesRead == 0) {
+                return false;
+            }
+
+            totalRead += bytesRead;
+        }
+
+        return true;
     }
 
     /// <summary>

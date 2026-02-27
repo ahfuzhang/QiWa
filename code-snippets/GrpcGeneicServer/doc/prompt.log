@@ -1,0 +1,178 @@
+[2026-02-27 14:09:03 +0800] 用户提示: 请以当前文件为提示词，为我生成代码。
+[2026-02-27 14:09:03 +0800] 关联提示词文件: code-snippets/GrpcGeneicServer/prompt.md:1-133
+[2026-02-27 14:09:03 +0800] 提示词正文开始
+
+# 目标
+基于项目 https://github.com/grpc/grpc-dotnet/ 实现一个高性能的简洁的 grpc 服务。
+使用这个框架的底层的 api 来做全局的更底层的功能封装，从而绕开以 proto 文件生成代码的模式。
+
+# 约束
+
+参考以下代码:
+
+```csharp
+// Program.cs (net8.0+). NuGet: Grpc.AspNetCore, Grpc.Core.Api
+using System.Buffers;
+using System.Text;
+using Grpc.AspNetCore.Server;
+using Grpc.Core;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddGrpc();
+
+builder.Services.AddSingleton<GlobalRouter>(); // your single “global callback”
+var app = builder.Build();
+
+app.MapGrpcService<RawBytesGrpcService>();     // only one service class
+app.MapGet("/", () => "gRPC raw-bytes demo. Use a gRPC client.");
+
+app.Run();
+
+/// <summary>
+/// One gRPC service endpoint; all methods route to GlobalRouter.
+/// The request/response "message type" is ReadOnlySequence<byte> (raw payload bytes).
+/// </summary>
+sealed class RawBytesGrpcService : BindableService
+{
+    // Define methods with custom marshaller (no Protobuf decode/encode).
+    static readonly Method<ReadOnlySequence<byte>, ReadOnlySequence<byte>> EchoMethod =
+        new(MethodType.Unary, "demo.Router", "Echo", RawMarshaller, RawMarshaller);
+
+    static readonly Method<ReadOnlySequence<byte>, ReadOnlySequence<byte>> UpperMethod =
+        new(MethodType.Unary, "demo.Router", "Upper", RawMarshaller, RawMarshaller);
+
+    public override void BindService(ServiceBinderBase binder)
+    {
+        binder.AddMethod(EchoMethod, Dispatch);
+        binder.AddMethod(UpperMethod, Dispatch);
+    }
+
+    // One global dispatch callback for all methods.
+    static async Task<ReadOnlySequence<byte>> Dispatch(
+        ReadOnlySequence<byte> request, ServerCallContext ctx)
+    {
+        var router = ctx.GetHttpContext().RequestServices.GetRequiredService<GlobalRouter>();
+        return await router.HandleAsync(request, ctx);
+    }
+
+    // Contextual marshaller: gives you raw payload bytes (post-gRPC-framing, pre-Protobuf).
+    static readonly Marshaller<ReadOnlySequence<byte>> RawMarshaller =
+        new(
+            serializer: static (seq, sc) =>
+            {
+                var writer = sc.GetBufferWriter();
+                foreach (var mem in seq)
+                {
+                    writer.Write(mem.Span);
+                }
+                sc.Complete();
+            },
+            deserializer: static dc =>
+            {
+                // This is the raw message payload bytes (no Protobuf decode).
+                return dc.PayloadAsReadOnlySequence();
+            });
+}
+
+/// <summary>
+/// Your single “global callback” + routing based on ctx.Method.
+/// ctx.Method is like "/demo.Router/Echo".
+/// </summary>
+sealed class GlobalRouter
+{
+    private readonly Dictionary<string, Func<ReadOnlySequence<byte>, ServerCallContext, ValueTask<ReadOnlySequence<byte>>>> _routes;
+
+    public GlobalRouter()
+    {
+        _routes = new(StringComparer.Ordinal)
+        {
+            ["/demo.Router/Echo"]  = static (req, _) => new(req), // echo raw bytes
+            ["/demo.Router/Upper"] = static (req, _) =>
+            {
+                // Example "business logic": treat payload as UTF-8 text, uppercase it, return UTF-8 bytes.
+                var text = Utf8(req);
+                var upper = text.ToUpperInvariant();
+                var bytes = Encoding.UTF8.GetBytes(upper);
+                return new(new ReadOnlySequence<byte>(bytes));
+            }
+        };
+    }
+
+    public ValueTask<ReadOnlySequence<byte>> HandleAsync(ReadOnlySequence<byte> request, ServerCallContext ctx)
+    {
+        if (_routes.TryGetValue(ctx.Method, out var fn))
+            return fn(request, ctx);
+
+        throw new RpcException(new Status(StatusCode.Unimplemented, $"No route for {ctx.Method}"));
+    }
+
+    static string Utf8(ReadOnlySequence<byte> seq)
+    {
+        if (seq.IsSingleSegment) return Encoding.UTF8.GetString(seq.First.Span);
+
+        // Minimal copy for demo; for production, consider pooled buffers.
+        var bytes = seq.ToArray();
+        return Encoding.UTF8.GetString(bytes);
+    }
+}
+
+```
+
+1. 自己做路由：从 request 中读出 service / method 的信息，程序自己决定去调用哪些类；
+2. 自己控制请求 body 的 decode
+3. 自己控制 response body 的 encode
+4. 不依赖于 proto 文件的代码生成机制
+
+# 命令行参数
+* `-http2.port=8090`: 设定监听的端口
+
+# 输出
+* 在 ./src/ 目录下实现一个简单的 echo 服务器，把请求 body 中未 decode 的 request 作为 encode 后的 response 返回
+* 生成 .csproj 文件和 .sln 文件
+* 生成 Makefile 文件，提供 build 和 run 两个命令
+  - 代码生成后自动调用 make build，确保可以编译通过
+
+[2026-02-27 14:09:03 +0800] 提示词正文结束
+
+
+[2026-02-27 14:25:58 +0800] 用户提示: 选中的代码进行解释：类的前面增加了 attibute，是否意味着 app.MapGrpcService<GatewayGrpcService>(); 代码中其实绑定了 GatewayGrpcService 这个类中定义的 qiwa.raw.Router 和 Invoke? 而我希望自己进行 service 和 method 的路由的功能是做不到的？
+[2026-02-27 14:25:58 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:10
+
+[2026-02-27 14:29:52 +0800] 用户提示: 解释一下选中的代码，我理解不了它是干什么的
+[2026-02-27 14:29:52 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+
+[2026-02-27 14:34:15 +0800] 用户提示: 你前面两次的回答是矛盾的。一方面，你告诉我 app.MapGrpcService<GatewayGrpcService>() 函数中必须绑定 service 和 method; 另一方面，你又告诉我 public static void BindService(ServiceBinderBase binder, GatewayGrpcService service) 函数中动态绑定了方法。请再认真思考一下。
+[2026-02-27 14:34:15 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+
+[2026-02-27 14:42:04 +0800] 用户提示: 选中的这个类看起来没什么用，能够把对应引用的位置改成直接使用 ReadOnlySequence<byte> ？
+[2026-02-27 14:42:04 +0800] 关联文件: src/GrpcGeneicServer/RawBytesPayload.cs:8
+
+[2026-02-27 15:15:42 +0800] 用户提示: 当前文件执行 make run 报错，请解决
+[2026-02-27 15:15:42 +0800] 关联文件: Makefile:8
+[2026-02-27 15:15:42 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+[2026-02-27 15:15:42 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:52
+
+[2026-02-27 17:00:40 +0800] 用户提示: 执行 make run 报错。 我改了字符串的 serviceName 和 methodName: greet.Greeter/SayHello 为什么改字符串会影响程序报错？不符合我自己做路由的预期，请帮我找到问题原因
+[2026-02-27 17:00:40 +0800] 关联文件: Makefile:8
+[2026-02-27 17:00:40 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:16
+[2026-02-27 17:00:40 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+[2026-02-27 17:00:40 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:52
+
+[2026-02-27 17:04:11 +0800] 用户提示: "把处理函数改名为 SayHello" 为什么需要改函数名呢？难道通过反射获取函数名的吗？ 我期待的效果时，匹配任意路径，转到任意函数执行。 匹配路径的字符串，与执行的函数之间是没有必然关系的。 问题出在哪里?
+[2026-02-27 17:04:11 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:10
+[2026-02-27 17:04:11 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:16
+[2026-02-27 17:04:11 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+[2026-02-27 17:04:11 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:52
+[2026-02-27 17:04:11 +0800] 关联文件: src/GrpcGeneicServer/GrpcServerHost.cs:37
+
+[2026-02-27 17:08:45 +0800] 用户提示: 选中的位置：为什么 service 会为 null 呢？ 我希望去掉 null 的兼容，不让底层自己做反射。 在这个函数的上层做检查，避免传入 null
+[2026-02-27 17:08:45 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:40
+[2026-02-27 17:08:45 +0800] 关联文件: src/GrpcGeneicServer/GatewayGrpcService.cs:36
+[2026-02-27 17:08:45 +0800] 关联文件: src/GrpcGeneicServer/GrpcServerHost.cs:37
+
+[2026-02-27 17:19:19 +0800] 用户提示: ~/.dotnet/dotnet run --project Client.csproj -- -addr=http://127.0.0.1:8090 使用 /home/ahfu/code/github.com/ahfuzhang/QiWa/code-snippets/Greeter/Client 目录的客户端程序访问当前打开的 /home/ahfu/code/github.com/ahfuzhang/QiWa/code-snippets/GrpcGeneicServer/src/GrpcGeneicServer/Program.cs 发现错误: make run ~/.dotnet/dotnet run --project Client.csproj -- -addr=http://127.0.0.1:8090 Unhandled exception. Grpc.Core.RpcException: Status(StatusCode="InvalidArgument", Detail="Invalid request envelope: token bytes are incomplete.") 请根据错误信息，看看 grpc 服务器还有哪里不完善才导致了这个错误?
+[2026-02-27 17:19:19 +0800] 关联文件: src/GrpcGeneicServer/RequestEnvelopeDecoder.cs:24
+[2026-02-27 17:19:19 +0800] 关联文件: src/GrpcGeneicServer/GlobalRequestRouter.cs:48
+[2026-02-27 17:19:19 +0800] 关联文件: src/GrpcGeneicServer/RouteKeyFormatter.cs:13

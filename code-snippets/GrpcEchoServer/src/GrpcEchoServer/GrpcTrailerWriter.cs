@@ -17,11 +17,17 @@ internal static class GrpcTrailerWriter {
     public const string InternalErrorStatus = "13";
 
     /// <summary>
+    /// gRPC 资源耗尽状态码，表示请求体超出限制。
+    /// </summary>
+    public const string ResourceExhaustedStatus = "8";
+
+    /// <summary>
     /// 声明本次响应会返回 gRPC trailers。
     /// </summary>
     /// <param name="response">HTTP 响应对象。</param>
     public static void DeclareGrpcTrailers(HttpResponse response) {
         if (!response.SupportsTrailers()) {
+            // todo: 应该返回错误信息
             return;
         }
 
