@@ -1,9 +1,7 @@
-using System;
-using System.Collections.Generic;
-
 namespace MetricsPush;
 
-public class MetricsPushOptions {
+public class MetricsPushOptions
+{
     /// <summary>
     /// Push interval in seconds.
     /// </summary>
@@ -19,7 +17,8 @@ public class MetricsPushOptions {
     /// </summary>
     public Dictionary<string, string> PublicTags { get; set; } = new();
 
-    public MetricsPushOptions(int pushIntervalSeconds, string pushAddr, Dictionary<string, string> publicTags) {
+    public MetricsPushOptions(int pushIntervalSeconds, string pushAddr, Dictionary<string, string> publicTags)
+    {
         PushIntervalSeconds = pushIntervalSeconds;
         PushAddr = pushAddr;
         PublicTags = publicTags ?? new Dictionary<string, string>();

@@ -3,21 +3,26 @@ using System.Text;
 
 namespace MetricsPush;
 
-internal static class Utf8LabelWriter {
+internal static class Utf8LabelWriter
+{
     private static readonly byte[] EscapedBackslash = new byte[] { (byte)'\\', (byte)'\\' };
     private static readonly byte[] EscapedQuote = new byte[] { (byte)'\\', (byte)'"' };
     private static readonly byte[] EscapedNewline = new byte[] { (byte)'\\', (byte)'n' };
     private static readonly byte[] EscapedCarriageReturn = new byte[] { (byte)'\\', (byte)'r' };
     private static readonly byte[] EscapedTab = new byte[] { (byte)'\\', (byte)'t' };
 
-    public static void AppendEscaped(IBufferWriter<byte> writer, string value) {
-        if (string.IsNullOrEmpty(value)) {
+    public static void AppendEscaped(IBufferWriter<byte> writer, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
             return;
         }
 
         byte[] utf8 = Encoding.UTF8.GetBytes(value);
-        foreach (byte b in utf8) {
-            switch (b) {
+        foreach (byte b in utf8)
+        {
+            switch (b)
+            {
                 case (byte)'\\':
                     Utf8BufferWriter.AppendBytes(writer, EscapedBackslash);
                     break;

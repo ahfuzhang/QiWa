@@ -1,20 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Reflection;
-using Microsoft.AspNetCore.Builder;
-using Xunit;
+using System.Text;
 using MetricsPush;
+using Xunit;
 using ZstdSharp;
 
 namespace Tests.MetricsPush;
 
-public class MetricsPusherTests : IDisposable {
+public class MetricsPusherTests : IDisposable
+{
     private readonly HttpListener _listener;
     private readonly string _listenUrl;
     private readonly Task _serverTask;
@@ -23,7 +17,8 @@ public class MetricsPusherTests : IDisposable {
     private byte[]? _lastReceivedBody;
     private string? _lastContentEncoding;
 
-    public MetricsPusherTests() {
+    public MetricsPusherTests()
+    {
         int port = new Random().Next(20000, 30000);
         _listenUrl = $"http://127.0.0.1:{port}/push/";
         _listener = new HttpListener();
@@ -35,14 +30,18 @@ public class MetricsPusherTests : IDisposable {
         _serverTask = Task.Run(() => ServerLoop(_serverCts.Token));
     }
 
-    private async Task ServerLoop(CancellationToken token) {
-        while (!token.IsCancellationRequested) {
-            try {
-                var context = await _listener.GetContextAsync();
+    private async Task ServerLoop(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var context = await _listener.GetContextAsync().ConfigureAwait(false);
                 var request = context.Request;
 
-                using (var ms = new MemoryStream()) {
-                    await request.InputStream.CopyToAsync(ms);
+                using (var ms = new MemoryStream())
+                {
+                    await request.InputStream.CopyToAsync(ms, token).ConfigureAwait(false);
                     _lastReceivedBody = ms.ToArray();
                 }
                 _lastContentEncoding = request.Headers["Content-Encoding"];
@@ -51,18 +50,21 @@ public class MetricsPusherTests : IDisposable {
                 context.Response.StatusCode = 200;
                 context.Response.Close();
             }
-            catch (HttpListenerException) {
+            catch (HttpListenerException)
+            {
                 // Listener stopped
                 break;
             }
-            catch {
+            catch
+            {
                 // Ignore
             }
         }
     }
 
     [Fact]
-    public async Task TestMetricsPushFlow() {
+    public async Task TestMetricsPushFlow()
+    {
         // Arrange
         var builder = WebApplication.CreateBuilder();
         var tags = new Dictionary<string, string> { { "env", "test" } };
@@ -71,8 +73,8 @@ public class MetricsPusherTests : IDisposable {
 
         var payload = Encoding.UTF8.GetBytes("metrics_push_count{env=\"test\"} 10\n");
         SeedExporter(pusher, payload);
-        await InvokePushOnceAsync(pusher);
-        await _requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await InvokePushOnceAsync(pusher).ConfigureAwait(false);
+        await _requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
         // Assert
         Assert.NotNull(_lastReceivedBody);
@@ -88,30 +90,35 @@ public class MetricsPusherTests : IDisposable {
         Assert.Contains("env=\"test\"", text);
     }
 
-    public void Dispose() {
+    public void Dispose()
+    {
         _serverCts.Cancel();
         _listener.Stop();
         _listener.Close();
     }
 
-    private static void SeedExporter(MetricsPusher pusher, byte[] payload) {
+    private static void SeedExporter(MetricsPusher pusher, byte[] payload)
+    {
         var exporterField = typeof(MetricsPusher).GetField("_exporter", BindingFlags.NonPublic | BindingFlags.Instance);
         var exporter = (InProcessMetricsExporter)exporterField!.GetValue(pusher)!;
 
-        var buffer = new Common.RentedBuffer {
+        var buffer = new Common.RentedBuffer
+        {
             Data = payload,
             Length = payload.Length
         };
 
         var lockField = typeof(InProcessMetricsExporter).GetField("_lock", BindingFlags.NonPublic | BindingFlags.Instance);
         var gate = lockField!.GetValue(exporter)!;
-        lock (gate) {
+        lock (gate)
+        {
             typeof(InProcessMetricsExporter).GetField("_latest", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, buffer);
             typeof(InProcessMetricsExporter).GetField("_latestUsed", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(exporter, payload.Length);
         }
     }
 
-    private static Task InvokePushOnceAsync(MetricsPusher pusher) {
+    private static Task InvokePushOnceAsync(MetricsPusher pusher)
+    {
         var method = typeof(MetricsPusher).GetMethod("PushOnceAsync", BindingFlags.NonPublic | BindingFlags.Instance);
         return (Task)method!.Invoke(pusher, new object[] { CancellationToken.None })!;
     }

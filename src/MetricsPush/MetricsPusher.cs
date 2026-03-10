@@ -1,20 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
-using Compress;
 
 namespace MetricsPush;
 
-public sealed class MetricsPusher : IDisposable {
+public sealed class MetricsPusher : IDisposable
+{
     private readonly InProcessMetricsExporter _exporter;
     private readonly HttpClient _httpClient;
     private readonly PeriodicTimer _timer;
@@ -28,10 +18,16 @@ public sealed class MetricsPusher : IDisposable {
         string pushAddr,
         Dictionary<string, string> publicTags,
         WebApplicationBuilder builder,
-        HttpClient? httpClient = null) {
-        if (intervalSeconds <= 0) throw new ArgumentOutOfRangeException(nameof(intervalSeconds));
-        if (string.IsNullOrWhiteSpace(pushAddr)) throw new ArgumentNullException(nameof(pushAddr));
-        if (builder == null) throw new ArgumentNullException(nameof(builder));
+        HttpClient? httpClient = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(intervalSeconds);
+
+        if (string.IsNullOrWhiteSpace(pushAddr))
+        {
+            throw new ArgumentNullException(nameof(pushAddr));
+        }
+
+        ArgumentNullException.ThrowIfNull(builder);
 
         _pushUrl = pushAddr;
         _exporter = new InProcessMetricsExporter(publicTags);
@@ -41,7 +37,8 @@ public sealed class MetricsPusher : IDisposable {
 
         // Configure OpenTelemetry
         builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics => {
+            .WithMetrics(metrics =>
+            {
                 metrics.AddMeter(MetricsPushTelemetry.Meter.Name);
                 metrics.AddProcessInstrumentation();
                 metrics.AddRuntimeInstrumentation();
@@ -72,17 +69,25 @@ public sealed class MetricsPusher : IDisposable {
         _pushLoopTask = RunPushLoopAsync(_cts.Token);
     }
 
-    private async Task RunPushLoopAsync(CancellationToken token) {
-        while (await _timer.WaitForNextTickAsync(token)) {
-            if (token.IsCancellationRequested) break;
-
-            try {
-                await PushOnceAsync(token);
-            }
-            catch (OperationCanceledException) {
+    private async Task RunPushLoopAsync(CancellationToken token)
+    {
+        while (await _timer.WaitForNextTickAsync(token).ConfigureAwait(false))
+        {
+            if (token.IsCancellationRequested)
+            {
                 break;
             }
-            catch (Exception) {
+
+            try
+            {
+                await PushOnceAsync(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception)
+            {
                 // Optionally log error if we had a logger.
                 // Since specific logging requirement wasn't clear on *where* to log (no ILogger passed explicitly to constructor except via builder which is hard to capture here),
                 // we might want to swallow or print to console.
@@ -92,19 +97,20 @@ public sealed class MetricsPusher : IDisposable {
         }
     }
 
-    private static readonly System.IO.Stream Stdout = Console.OpenStandardOutput();
-
-    private async Task PushOnceAsync(CancellationToken token) {
+    private async Task PushOnceAsync(CancellationToken token)
+    {
         // 1. Get snapshot
         using var payload = _exporter.GetSnapshot(out int payloadLength);
-        if (payloadLength == 0) {
+        if (payloadLength == 0)
+        {
             return;
         }
         //Console.WriteLine($"payloadLength={payloadLength}, {payload.Length}");
         //Stdout.Write(payload.Bytes());
         // 2. Compress
         var (compressed, error) = Compress.ZstdCompressor.Compress(payload.Data.AsSpan(0, payloadLength));
-        if (error.Err()) {
+        if (error.Err())
+        {
             Console.Error.WriteLine($"ERROR metrics push compress failed: code={error.Code} message={error.Message}");
             return;
         }
@@ -120,9 +126,10 @@ public sealed class MetricsPusher : IDisposable {
         content.Headers.ContentType = new MediaTypeHeaderValue("text/plain") { CharSet = "utf-8" };
         content.Headers.ContentEncoding.Add("zstd");
         //Console.WriteLine($"ready to post: {compressedLength} bytes, url={_pushUrl}");
-        using var response = await _httpClient.PostAsync(_pushUrl, content, token);
+        using var response = await _httpClient.PostAsync(_pushUrl, content, token).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode) {
+        if (response.IsSuccessStatusCode)
+        {
             MetricsPushTelemetry.PushCount.Add(1);
             MetricsPushTelemetry.PayloadBytes.Record(compressedLength);
             MetricsPushTelemetry.PayloadUncompressedBytes.Record(payloadLength);
@@ -132,15 +139,22 @@ public sealed class MetricsPusher : IDisposable {
         Console.WriteLine($"Failed to push metrics: {response.StatusCode}");
     }
 
-    public void Dispose() {
-        if (_disposed) return;
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _cts.Cancel();
-        try {
+        try
+        {
             _pushLoopTask.Wait(TimeSpan.FromSeconds(1)); // Wait briefly for loop to finish
         }
-        catch {
+        catch
+        {
             // Ignore
         }
 

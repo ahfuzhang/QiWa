@@ -1,13 +1,14 @@
-
-using System.Runtime.CompilerServices;
 using Xunit;
 
-public class ScopeGuardTests {
+public class ScopeGuardTests
+{
     [Fact]
-    public void UseScope() {
+    public void UseScope()
+    {
         var notCleanup = true;
         {
-            using (var _ = new Common.ScopeGuard(() => { notCleanup = false; })) {
+            using (var _ = new Common.ScopeGuard(() => { notCleanup = false; }))
+            {
                 Console.WriteLine("\ttest output: biz logic");
             }
         }
@@ -15,9 +16,11 @@ public class ScopeGuardTests {
     }
 }
 
-public class ErrorTests {
+public class ErrorTests
+{
     [Fact]
-    public void HasError() {
+    public void HasError()
+    {
         Common.Error err = default;
         Assert.False(err.Err());
         Common.Error err1 = new Common.Error { Code = 1, Message = "err happend" };
@@ -25,9 +28,11 @@ public class ErrorTests {
     }
 }
 
-public class RentedBuffer {
+public class RentedBuffer
+{
     [Fact]
-    public void Rent() {
+    public void Rent()
+    {
         Common.RentedBuffer buffer = default;
         var span1 = buffer.Bytes();
         Assert.Equal(0, span1.Length);
@@ -49,12 +54,14 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Extend_DoublesCapacityAndPreservesData() {
+    public void Extend_DoublesCapacityAndPreservesData()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(8);
         Assert.NotNull(buffer.Data);
         int usedLength = 5;
-        for (int i = 0; i < usedLength; i++) {
+        for (int i = 0; i < usedLength; i++)
+        {
             buffer.Data[i] = (byte)('a' + i);
         }
         buffer.Length = usedLength;
@@ -68,17 +75,17 @@ public class RentedBuffer {
         Assert.True(buffer.Data.Length >= oldCapacity * 2);
         Assert.False(object.ReferenceEquals(oldData, buffer.Data));
         Assert.Equal(usedLength, buffer.Length);
-        for (int i = 0; i < usedLength; i++) {
+        for (int i = 0; i < usedLength; i++)
+        {
             Assert.Equal((byte)('a' + i), buffer.Data[i]);
         }
 
         buffer.Dispose();
     }
 
-
-
     [Fact]
-    public void Append_AddsStringsCorrectly() {
+    public void Append_AddsStringsCorrectly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
 
@@ -111,7 +118,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsByteCorrectly() {
+    public void Append_AddsByteCorrectly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(1);
 
@@ -131,7 +139,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsInt64Correctly() {
+    public void Append_AddsInt64Correctly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
 
@@ -152,7 +161,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsUInt64Correctly() {
+    public void Append_AddsUInt64Correctly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
 
@@ -175,7 +185,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsDoubleCorrectly() {
+    public void Append_AddsDoubleCorrectly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(1);
 
@@ -195,7 +206,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsBooleanCorrectly() {
+    public void Append_AddsBooleanCorrectly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
 
@@ -213,7 +225,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_AddsReadOnlySpanCorrectly() {
+    public void Append_AddsReadOnlySpanCorrectly()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(10);
 
@@ -230,7 +243,11 @@ public class RentedBuffer {
 
         // Large span triggering extend
         byte[] largeData = new byte[100];
-        for (int i = 0; i < 100; i++) largeData[i] = (byte)'x';
+        for (int i = 0; i < 100; i++)
+        {
+            largeData[i] = (byte)'x';
+        }
+
         buffer.Append((ReadOnlySpan<byte>)largeData);
         span = buffer.Bytes();
         Assert.Equal(105, span.Length);
@@ -239,7 +256,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendAsJsonEscapedString_EscapesSpecialBytes() {
+    public void AppendAsJsonEscapedString_EscapesSpecialBytes()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(4);
 
@@ -254,7 +272,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendAsJsonEscapedString_AppendsToExistingData() {
+    public void AppendAsJsonEscapedString_AppendsToExistingData()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(8);
 
@@ -269,7 +288,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendAsJsonEscapedString_StringEscapes() {
+    public void AppendAsJsonEscapedString_StringEscapes()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(4);
 
@@ -289,7 +309,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Clone_CopiesBufferAndLength() {
+    public void Clone_CopiesBufferAndLength()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(8);
 
@@ -314,7 +335,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendUtcDatetime_FormatsUtc() {
+    public void AppendUtcDatetime_FormatsUtc()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(64);
 
@@ -328,7 +350,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendUtcDatetime_ConvertsLocalToUtc() {
+    public void AppendUtcDatetime_ConvertsLocalToUtc()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(64);
 
@@ -344,7 +367,8 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void AppendUtcDatetime_UnspecifiedIsTreatedAsUtc() {
+    public void AppendUtcDatetime_UnspecifiedIsTreatedAsUtc()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(64);
 
@@ -359,10 +383,9 @@ public class RentedBuffer {
         buffer.Dispose();
     }
 
-
-
     [Fact]
-    public void Append_EdgeCases() {
+    public void Append_EdgeCases()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(1); // Small buffer to force extension for bool
 
@@ -386,12 +409,14 @@ public class RentedBuffer {
     }
 
     [Fact]
-    public void Append_ForceExtension() {
+    public void Append_ForceExtension()
+    {
         Common.RentedBuffer buffer = default;
         buffer.Rent(1);
         // ArrayPool might return more than 1. Fill it up.
         int initialCapacity = buffer.Data!.Length;
-        for (int i = 0; i < initialCapacity; i++) {
+        for (int i = 0; i < initialCapacity; i++)
+        {
             buffer.Append((byte)'x');
         }
         Assert.Equal(initialCapacity, buffer.Length);
@@ -405,7 +430,8 @@ public class RentedBuffer {
         int currentCapacity = buffer.Data.Length;
         int remaining = currentCapacity - buffer.Length;
         // Append small strings to fill remaining
-        for (int i = 0; i < remaining; i++) {
+        for (int i = 0; i < remaining; i++)
+        {
             buffer.Append((byte)'z');
         }
 
@@ -420,11 +446,12 @@ public class RentedBuffer {
         int targetLength = currentCapacity - maxByteCountBool + 1; // force extend
 
         // Use byte append to fill up
-        while (buffer.Length < targetLength) {
+        while (buffer.Length < targetLength)
+        {
             buffer.Append((byte)'b');
         }
 
-        int lengthBeforeBool = buffer.Length;
+        _ = buffer.Length;
         // Verify we are in the zone where Extend is needed: (Capacity - Length < 5)
         Assert.True(buffer.Data.Length - buffer.Length < maxByteCountBool);
 

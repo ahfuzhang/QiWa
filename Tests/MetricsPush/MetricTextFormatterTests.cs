@@ -1,18 +1,18 @@
-using System;
 using System.Buffers;
-using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Text;
 using MetricsPush;
 using OpenTelemetry;
-using System.Diagnostics.Metrics;
 using OpenTelemetry.Metrics;
 using Xunit;
 
 namespace Tests.MetricsPush;
 
-public class MetricTextFormatterTests {
+public class MetricTextFormatterTests
+{
     [Fact]
-    public void Format_CorrectlyFormatsCounter() {
+    public void Format_CorrectlyFormatsCounter()
+    {
         // Ideally we want to call MetricTextFormatter.Format(writer, metrics, extraLabels).
         // But creating `Metric` objects manually is hard (internal OTel types).
         // We will perform an integration-style unit test via InProcessMetricsExporter logic, 
@@ -71,12 +71,18 @@ public class MetricTextFormatterTests {
         Assert.Contains(" 10", text);
     }
 
-    private class CapturingExporter : BaseExporter<Metric> {
+    private sealed class CapturingExporter : BaseExporter<Metric>
+    {
         private readonly List<Metric> _items;
         public CapturingExporter(List<Metric> items) => _items = items;
 
-        public override ExportResult Export(in Batch<Metric> batch) {
-            foreach (var item in batch) _items.Add(item);
+        public override ExportResult Export(in Batch<Metric> batch)
+        {
+            foreach (var item in batch)
+            {
+                _items.Add(item);
+            }
+
             return ExportResult.Success;
         }
     }

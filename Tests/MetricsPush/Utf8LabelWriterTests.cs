@@ -5,7 +5,8 @@ using Xunit;
 
 namespace Tests.MetricsPush;
 
-public class Utf8LabelWriterTests {
+public class Utf8LabelWriterTests
+{
     [Theory]
     [InlineData("simple", "simple")]
     [InlineData("escape\\slash", "escape\\\\slash")]
@@ -15,7 +16,8 @@ public class Utf8LabelWriterTests {
     [InlineData("tab\tchar", "tab\\tchar")]
     [InlineData("", "")]
     [InlineData(null, "")]
-    public void AppendEscaped_ValidInput_WritesEscapedUtf8(string? input, string expected) {
+    public void AppendEscaped_ValidInput_WritesEscapedUtf8(string? input, string expected)
+    {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
 
@@ -31,7 +33,8 @@ public class Utf8LabelWriterTests {
     }
 
     [Fact]
-    public void AppendEscaped_ComplexString_EscapesAll() {
+    public void AppendEscaped_ComplexString_EscapesAll()
+    {
         // Arrange
         var writer = new ArrayBufferWriter<byte>();
         string input = "Line1\nLine2\t\"Quote\"\\Backslash";
