@@ -7,3 +7,5 @@
 /doc/prompt.log
 /code-snippets/Greeter/Client/bin/
 /code-snippets/Greeter/Client/obj/
+/code-snippets/GrpcRawClient/bin/
+/code-snippets/GrpcRawClient/obj/

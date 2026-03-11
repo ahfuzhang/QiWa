@@ -272,6 +272,10 @@ internal sealed class EchoServiceMethodProvider : IServiceMethodProvider<EchoSer
                 // 框架已在 PayloadAsNewBuffer() 前自动解压（gzip/zstd），此处直接反序列化
                 // HttpContext 上的原始 HTTP 头（包含所有 gRPC 保留头）
                 var httpCtx = ctx.GetHttpContext();
+                Console.WriteLine("=== HTTP Request Headers ===");
+                foreach (var header in httpCtx.Request.Headers)
+                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                Console.WriteLine("============================");
                 string? grpcEncoding = httpCtx.Request.Headers["grpc-encoding"].FirstOrDefault();
                 Console.WriteLine($"grpc-encoding: {grpcEncoding ?? "none"}");
                 // string? grpcEncoding = ctx.RequestHeaders.GetValue("grpc-encoding");
