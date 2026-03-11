@@ -1,11 +1,12 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Collections.Generic;
 using System.Text;
 using Grpc.AspNetCore.Server;         // Marshaller<T>、SerializationContext、DeserializationContext
 using Grpc.AspNetCore.Server.Model;   // IServiceMethodProvider<T>、ServiceMethodProviderContext<T>
 using Grpc.Core;                      // Method<TReq,TResp>、MethodType、ServerCallContext、RpcException、Status、StatusCode
+using System.IO.Compression;           // CompressionLevel
+using Grpc.Net.Compression;           // ICompressionProvider、GzipCompressionProvider
 using Microsoft.AspNetCore.Builder;   // WebApplication、WebApplicationBuilder
 using Microsoft.AspNetCore.Hosting;   // IWebHostBuilder（ConfigureKestrel 扩展所在）
 using Microsoft.AspNetCore.Server.Kestrel.Core; // HttpProtocols.Http2
@@ -67,6 +68,7 @@ internal sealed class EchoService {
     // ──────────────────────────────────────────────────────────────────────────
     public static Task<RawPayload> DispatchAsync(RawPayload request, ServerCallContext context) {
         ReadOnlySequence<byte> bytes = request.Bytes;
+        Console.WriteLine($"request len={bytes.Length}");
         string routeKey;
         ReadOnlySequence<byte> payload;
 
@@ -267,12 +269,19 @@ internal sealed class EchoServiceMethodProvider : IServiceMethodProvider<EchoSer
                     ctx.Status = new Status(StatusCode.NotFound, "invalid path:"+envelopeRoute);
                     return Task.FromResult<RawPayload>(new RawPayload(bytes));
                 }
-                // 尝试反序列化
-                HelloRequest r = HelloRequest.Parser.ParseFrom(bytes);
+                // 框架已在 PayloadAsNewBuffer() 前自动解压（gzip/zstd），此处直接反序列化
+                // HttpContext 上的原始 HTTP 头（包含所有 gRPC 保留头）
+                var httpCtx = ctx.GetHttpContext();
+                string? grpcEncoding = httpCtx.Request.Headers["grpc-encoding"].FirstOrDefault();
+                Console.WriteLine($"grpc-encoding: {grpcEncoding ?? "none"}");
+                // string? grpcEncoding = ctx.RequestHeaders.GetValue("grpc-encoding");
+                // Console.WriteLine($"grpc-encoding: {grpcEncoding ?? "none"}");
+                HelloRequest r = HelloRequest.Parser.ParseFrom(envelopePayload.ToArray());
                 Console.WriteLine("name:" + r.Name);
                 HelloReply rsp = new HelloReply();
                 rsp.Message = "you said:" + r.Name;
                 byte[] rspBytes = rsp.ToByteArray();
+                // 框架根据 ResponseCompressionAlgorithm 配置自动压缩响应，无需手动处理
                 return Task.FromResult(new RawPayload(new ReadOnlySequence<byte>(rspBytes)));
             }
         );
@@ -285,13 +294,21 @@ internal sealed class EchoServiceMethodProvider : IServiceMethodProvider<EchoSer
 // ──────────────────────────────────────────────────────────────────────────────
 internal static class Program {
     public static async Task Main(string[] args) {
-        // 自行解析 -http2.port=<n>，避免把自定义参数传给 CreateBuilder。
+        // 自行解析自定义参数，避免把它们传给 CreateBuilder。
         // ASP.NET Core 配置系统要求单横杠 short switch 必须预先注册映射，否则抛 FormatException。
         int port = 5000;
+        string? outputCompression = null; // null = 不压缩；"gzip" 或 "zstd"
         foreach (string arg in args) {
             if (arg.StartsWith("-http2.port=", StringComparison.Ordinal) &&
                 int.TryParse(arg["-http2.port=".Length..], out int p))
                 port = p;
+            else if (arg.StartsWith("-compress.output=", StringComparison.Ordinal)) {
+                string v = arg["-compress.output=".Length..];
+                if (v is "gzip" or "zstd")
+                    outputCompression = v;
+                else
+                    Console.WriteLine($"[warn] -compress.output 不支持的值 '{v}'，支持：gzip / zstd，本次不启用输出压缩。");
+            }
         }
 
         // 不传 args，避免框架尝试解析不认识的自定义参数
@@ -300,8 +317,27 @@ internal static class Program {
         // 配置 Kestrel 只监听 HTTP/2（gRPC 要求 HTTP/2，且通常不与 HTTP/1.1 混用）
         builder.WebHost.ConfigureKestrel(k => k.ListenAnyIP(port, o => o.Protocols = HttpProtocols.Http2));
 
-        // 注册 gRPC 核心服务（拦截器、编解码器管线等）
-        builder.Services.AddGrpc();
+        // 注册 gRPC 核心服务，显式注册 gzip 和 zstd 压缩提供者。
+        // 注意：若 CompressionProviders 非空，框架的 PostConfigure 不会自动补充 gzip，
+        // 因此必须在此手动添加两者。
+        //
+        // ResponseCompressionAlgorithm：框架在发送响应时自动完成以下三件事：
+        //   1. 压缩 Marshaller 序列化后的字节
+        //   2. 在 gRPC 帧头写 Compressed-Flag = 1
+        //   3. 在响应初始元数据中写 grpc-encoding: <algorithm>
+        // 注意：框架会先检查客户端的 grpc-accept-encoding，只有客户端声明接受该算法时才压缩。
+        builder.Services.AddGrpc(options =>
+        {
+            options.CompressionProviders.Add(new GzipCompressionProvider(CompressionLevel.Fastest));
+            options.CompressionProviders.Add(new ZstdCompressionProvider());
+            if (outputCompression is not null) {
+                options.ResponseCompressionAlgorithm = outputCompression;
+                options.ResponseCompressionLevel = CompressionLevel.Fastest;
+            }
+        });
+        Console.WriteLine(outputCompression is not null
+            ? $"输出压缩：{outputCompression}"
+            : "输出压缩：未启用");
 
         // 注册自定义方法提供器，替代框架默认的 proto 反射发现机制。
         // 框架启动时会找到所有 IServiceMethodProvider<EchoService> 实现并调用 OnServiceMethodDiscovery。

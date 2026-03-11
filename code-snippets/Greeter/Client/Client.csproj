@@ -11,5 +11,6 @@
     <PackageReference Include="Google.Protobuf" Version="3.30.2" />
     <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
     <PackageReference Include="Grpc.Tools" Version="2.71.0" PrivateAssets="All" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.1" />
   </ItemGroup>
 </Project>

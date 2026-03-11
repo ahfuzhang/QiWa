@@ -11,6 +11,12 @@ build:
 run:
 	$(DOTNET) run --project $(PRJ).csproj -- -http2.port=8090
 
+run_gzip:
+	$(DOTNET) run --project $(PRJ).csproj -- -http2.port=8090 -compress.output=gzip
+
+run_zstd:
+	$(DOTNET) run --project $(PRJ).csproj -- -http2.port=8090 -compress.output=zstd
+
 .PHONY: build run
 
 req:

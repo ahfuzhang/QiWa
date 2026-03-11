@@ -5,3 +5,5 @@
 .netcoredbg_hist
 /.code-server/
 /doc/prompt.log
+/code-snippets/Greeter/Client/bin/
+/code-snippets/Greeter/Client/obj/
