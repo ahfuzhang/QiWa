@@ -1,4 +1,8 @@
-DOTNET := ~/.dotnet/dotnet
+ifeq ($(shell uname), Darwin)
+    DOTNET := dotnet
+else
+    DOTNET := ~/.dotnet/dotnet
+endif
 PRJ := Client
 
 build:
