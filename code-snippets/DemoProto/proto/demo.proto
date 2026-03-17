@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package demo;
+
+option csharp_namespace = "Demo.Protos";
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_DISABLED = 2;
+}
+
+message ChildMessage {
+  int32 ChildId = 1;
+  string ChildName = 2;
+}
+
+message AllTypesMessage {
+  double DoubleValue = 1;
+  float FloatValue = 2;
+  int32 Int32Value = 3;
+  int64 Int64Value = 4;
+  uint32 Uint32Value = 5;
+  uint64 Uint64Value = 6;
+  sint32 Sint32Value = 7;
+  sint64 Sint64Value = 8;
+  fixed32 Fixed32Value = 9;
+  fixed64 Fixed64Value = 10;
+  sfixed32 Sfixed32Value = 11;
+  sfixed64 Sfixed64Value = 12;
+  bool BoolValue = 13;
+  string StringValue = 14;
+  bytes BytesValue = 15;
+
+  Status Status = 16;
+  ChildMessage Child = 17;
+
+  repeated int32 Numbers = 18;
+  repeated string Tags = 19;
+
+  map<string, int32> Scores = 20;
+}

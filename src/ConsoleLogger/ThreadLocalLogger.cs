@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 
 internal sealed class BufferWrapper
@@ -24,6 +25,10 @@ public partial class ThreadLocalLogger
     private readonly PeriodicTimer flushTimer;
     private readonly object locker = new object();
     private readonly HttpClient? httpClient;
+    /// <summary>
+    /// 仅供测试使用，用于截获输出文本，避免直接写入 stdout。
+    /// </summary>
+    internal static Action<string>? TestOutputCapture;
 
     private static readonly ThreadLocal<ThreadLocalLogger> _threadLocal =
         new ThreadLocal<ThreadLocalLogger>(() => new ThreadLocalLogger(), trackAllValues: true);
@@ -67,6 +72,19 @@ public partial class ThreadLocalLogger
     internal void Flush(ref Common.RentedBuffer buf)
     {
         System.Diagnostics.Debug.Assert(buf.Data != null);
+        if (TestOutputCapture != null)
+        {
+            var testWrapper = NewAndGetOld();
+            try
+            {
+                TestOutputCapture(Encoding.UTF8.GetString(testWrapper.Rented.Data!, 0, testWrapper.Rented.Length));
+            }
+            finally
+            {
+                testWrapper.Rented.Dispose();
+            }
+            return;
+        }
         if (buf.Length < buf.Data.Length - ReservedBufferLen)
         {
             return;
@@ -143,6 +161,12 @@ public partial class ThreadLocalLogger
                 Logger.DiagnosticsLogger.LogError(null,
                     $"writeJsonline fail: code={err.Code}, msg={err.Message}");
             }
+            var outputCapture = TestOutputCapture;
+            if (outputCapture != null)
+            {
+                outputCapture(Encoding.UTF8.GetString(wrapper.Rented.Data!, 0, wrapper.Rented.Length));
+                return;
+            }
             Common.NativeWrite.WriteStdout(wrapper.Rented.Data.AsSpan(0, wrapper.Rented.Length));
         }
         finally
@@ -183,6 +207,11 @@ public partial class ThreadLocalLogger
         }
         catch (OperationCanceledException err)
         {
+            // Prompt intent: `make test` should not print false failure logs during normal logger shutdown.
+            if (Logger.Instance == null || Logger.Instance.LoggerToken.IsCancellationRequested)
+            {
+                return;
+            }
             var exceptionLocation = GetExceptionLocation(err);
             Logger.DiagnosticsLogger.LogError(err, "TimerLoop canceled. IsCancellationRequested={IsCancellationRequested}. ExceptionLocation={ExceptionLocation}.",
                 Logger.Instance.LoggerToken.IsCancellationRequested, exceptionLocation);

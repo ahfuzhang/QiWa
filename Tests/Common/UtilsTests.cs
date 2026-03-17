@@ -96,7 +96,7 @@ public class RentedBuffer
         Assert.Equal("Hello", System.Text.Encoding.UTF8.GetString(span));
 
         // Append multiple strings
-        buffer.Append(", ", "World!");
+        buffer.AppendMulti(", ", "World!");
         span = buffer.Bytes();
         Assert.Equal(13, span.Length);
         Assert.Equal("Hello, World!", System.Text.Encoding.UTF8.GetString(span));
@@ -400,7 +400,7 @@ public class RentedBuffer
         Assert.Equal(4, buffer.Length); // Should not change
 
         // Test Append(params string[]) with empty string
-        buffer.Append("A", "", "B");
+        buffer.AppendMulti("A", "", "B");
         span = buffer.Bytes();
         Assert.Equal(6, span.Length);
         Assert.Equal("trueAB", System.Text.Encoding.UTF8.GetString(span));
@@ -436,7 +436,7 @@ public class RentedBuffer
         }
 
         // Now Append(params string[]) triggering extension
-        buffer.Append(new string[] { "Extension", "Test" });
+        buffer.AppendMulti(new string[] { "Extension", "Test" });
         Assert.True(buffer.Data.Length > currentCapacity);
 
         // Test Append(bool) extension

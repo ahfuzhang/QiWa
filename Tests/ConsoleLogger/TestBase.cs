@@ -16,13 +16,14 @@ public class ConsoleLoggerFixture : IDisposable
     public ConsoleLoggerFixture()
     {
         // Global initialization for all tests
-        Logger.Init(LogLevel.Debug, 1000, null, 1024 * 4);
+        Logger.Init(global::ConsoleLogger.LogLevel.Debug, 100, null, 1024 * 4);
     }
 
     public void Dispose()
     {
         try
         {
+            ThreadLocalLogger.TestOutputCapture = null;
             Logger.Shutdown();
         }
         catch { }
@@ -40,17 +41,13 @@ public abstract class TestBase
         _capturedOutput.Clear();
 
         // Hook into ThreadLocalLogger to capture output
-        ThreadLocalLogger.TestOutputCapture = (span) =>
-        {
-            var str = Encoding.UTF8.GetString(span);
-            _capturedOutput.Enqueue(str);
-        };
+        ThreadLocalLogger.TestOutputCapture = _capturedOutput.Enqueue;
     }
 
     protected string GetCapturedOutput()
     {
         // Allow some time for async flush to happen
-        Thread.Sleep(100);
+        Thread.Sleep(200);
 
         var sb = new StringBuilder();
         while (_capturedOutput.TryDequeue(out var line))
@@ -63,7 +60,7 @@ public abstract class TestBase
     protected List<string> GetCapturedLines()
     {
         // Allow some time for async flush to happen
-        Thread.Sleep(100);
+        Thread.Sleep(200);
 
         var lines = new List<string>();
         while (_capturedOutput.TryDequeue(out var chunk))

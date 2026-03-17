@@ -8,17 +8,20 @@ public class TaskLoggerTests : TestBase
     [Fact]
     public void WithFields_AppendsFieldsCorrectly()
     {
-        var logger = Logger.Get();
-        Assert.NotNull(logger);
+        var rootLogger = Logger.Get();
+        Assert.NotNull(rootLogger);
 
         // 1. Initial WithFields call
-        logger.WithFields(Field.String("key1"u8, "value1"));
+        var logger = rootLogger.WithFields(Field.String("key1"u8, "value1"));
+        Logger.Return(rootLogger);
 
         // 2. Chained WithFields call
-        logger.WithFields(Field.Int64("key2"u8, 2));
+        var nextLogger = logger.WithFields(Field.Int64("key2"u8, 2));
+        Logger.Return(logger);
+        logger = nextLogger;
 
         // Log a message to flush everything
-        Logger.SetLevel(LogLevel.Info);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Info);
         logger.Info(Field.String("msg"u8, "final"));
 
         Logger.Return(logger);
@@ -34,16 +37,17 @@ public class TaskLoggerTests : TestBase
     [Fact]
     public void WithFields_MultipleOverloads_WorkCorrectly()
     {
-        var logger = Logger.Get();
+        var rootLogger = Logger.Get();
 
         // Test a high-arity overload (e.g., 3 fields)
-        logger.WithFields(
+        var logger = rootLogger.WithFields(
             Field.String("f1"u8, "v1"),
             Field.String("f2"u8, "v2"),
             Field.String("f3"u8, "v3")
         );
+        Logger.Return(rootLogger);
 
-        Logger.SetLevel(LogLevel.Info);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Info);
         logger.Info(Field.String("msg"u8, "done"));
         Logger.Return(logger);
 
@@ -56,15 +60,18 @@ public class TaskLoggerTests : TestBase
     [Fact]
     public void WithFields_AccumulatesPrefixProperly()
     {
-        var logger = Logger.Get();
+        var rootLogger = Logger.Get();
 
         // First batch
-        logger.WithFields(Field.String("batch1"u8, "ok"));
+        var logger = rootLogger.WithFields(Field.String("batch1"u8, "ok"));
+        Logger.Return(rootLogger);
 
         // Second batch
-        logger.WithFields(Field.String("batch2"u8, "ok"));
+        var nextLogger = logger.WithFields(Field.String("batch2"u8, "ok"));
+        Logger.Return(logger);
+        logger = nextLogger;
 
-        Logger.SetLevel(LogLevel.Info);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Info);
         logger.Info(Field.String("msg"u8, "test"));
         Logger.Return(logger);
 
@@ -78,16 +85,17 @@ public class TaskLoggerTests : TestBase
     [Fact]
     public void WithFields_MaxOverload_Works()
     {
-        var logger = Logger.Get();
+        var rootLogger = Logger.Get();
 
-        logger.WithFields(
+        var logger = rootLogger.WithFields(
             Field.Int64("f1"u8, 1), Field.Int64("f2"u8, 2), Field.Int64("f3"u8, 3), Field.Int64("f4"u8, 4), Field.Int64("f5"u8, 5),
             Field.Int64("f6"u8, 6), Field.Int64("f7"u8, 7), Field.Int64("f8"u8, 8), Field.Int64("f9"u8, 9), Field.Int64("f10"u8, 10),
             Field.Int64("f11"u8, 11), Field.Int64("f12"u8, 12), Field.Int64("f13"u8, 13), Field.Int64("f14"u8, 14), Field.Int64("f15"u8, 15),
             Field.Int64("f16"u8, 16), Field.Int64("f17"u8, 17), Field.Int64("f18"u8, 18), Field.Int64("f19"u8, 19), Field.Int64("f20"u8, 20)
         );
+        Logger.Return(rootLogger);
 
-        Logger.SetLevel(LogLevel.Info);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Info);
         logger.Info(Field.String("msg"u8, "max"));
         Logger.Return(logger);
 

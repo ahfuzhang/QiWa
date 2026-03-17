@@ -3,53 +3,158 @@ using Xunit;
 
 namespace Tests.ConsoleLogger;
 
+/// <summary>
+/// Prompt intent: 用测试覆盖 TaskLogger.Fatal 的全部重载和调用者信息，避免当前文件覆盖率过低。
+/// </summary>
 public class TaskLogger_FatalTests : TestBase
 {
-    [Fact]
-    public void Fatal_AllOverloads_GenerateCorrectOutput()
+    /// <summary>
+    /// 提供 1 到 20 的字段数量，驱动全部 Fatal 重载覆盖。
+    /// </summary>
+    public static IEnumerable<object[]> FatalFieldCounts()
     {
-        var logger = Logger.Get();
-        // Fatal should always log regardless of level (unless level is somehow Higher than Fatal, which is not possible in this enum design usually, but let's set to Fatal)
-        Logger.SetLevel(LogLevel.Fatal);
-
-        // Test 1 field overload
-        logger.Fatal(Field.String("f1"u8, "v1"));
-        var output = GetCapturedOutput();
-        Assert.Contains("\"f1\":\"v1\"", output);
-        Assert.Contains("\"level\":\"fatal\"", output);
-        ClearCapturedOutput();
-
-        // Test 20 fields overload
-        logger.Fatal(
-            Field.Int64("f1"u8, 1), Field.Int64("f2"u8, 2), Field.Int64("f3"u8, 3), Field.Int64("f4"u8, 4), Field.Int64("f5"u8, 5),
-            Field.Int64("f6"u8, 6), Field.Int64("f7"u8, 7), Field.Int64("f8"u8, 8), Field.Int64("f9"u8, 9), Field.Int64("f10"u8, 10),
-            Field.Int64("f11"u8, 11), Field.Int64("f12"u8, 12), Field.Int64("f13"u8, 13), Field.Int64("f14"u8, 14), Field.Int64("f15"u8, 15),
-            Field.Int64("f16"u8, 16), Field.Int64("f17"u8, 17), Field.Int64("f18"u8, 18), Field.Int64("f19"u8, 19), Field.Int64("f20"u8, 20)
-        );
-        output = GetCapturedOutput();
-        for (int i = 1; i <= 20; i++)
+        foreach (var fieldCount in Enumerable.Range(1, 20))
         {
-            Assert.Contains($"\"f{i}\":{i}", output);
+            yield return [fieldCount];
         }
-        ClearCapturedOutput();
-
-        Logger.Return(logger);
     }
 
-    [Fact]
-    public void Fatal_LogsEvenWhenLevelIsOff()
+    /// <summary>
+    /// 意图：显式调用每个 Fatal 重载，验证字段和调用者信息都被透传到最终输出。
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(FatalFieldCounts))]
+    public void Fatal_AllOverloads_GenerateCorrectOutput(int fieldCount)
     {
-        // Even if we hypothetically set level to something restrictive
-        // Fatal implementation in source doesn't check level!
-        // But let's verify that behavior.
-
         var logger = Logger.Get();
+        const string expectedFile = "/tmp/tasklogger-fatal-tests.cs";
+        const string expectedMember = "Fatal_AllOverloads_GenerateCorrectOutput";
+        const int expectedLine = 987;
 
-        logger.Fatal(Field.String("msg"u8, "fatal error"));
+        try
+        {
+            Logger.SetLevel(global::ConsoleLogger.LogLevel.Fatal);
 
-        var output = GetCapturedOutput();
-        Assert.Contains("\"msg\":\"fatal error\"", output);
+            InvokeFatal(logger, fieldCount, expectedFile, expectedMember, expectedLine);
 
-        Logger.Return(logger);
+            var output = GetCapturedOutput();
+            Assert.Contains("\"level\":\"fatal\"", output);
+            Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+            Assert.Contains($"\"_member\":\"{expectedMember}\"", output);
+            Assert.Contains($"\"_line\":{expectedLine}", output);
+            AssertContainsFields(output, fieldCount);
+        }
+        finally
+        {
+            Logger.Return(logger);
+        }
+    }
+
+    /// <summary>
+    /// 意图：验证未显式传入参数时，Fatal 会保留编译器生成的调用者信息。
+    /// </summary>
+    [Fact]
+    public void Fatal_UsesCompilerProvidedCallerInfo()
+    {
+        var logger = Logger.Get();
+        var expectedFile = GetCurrentSourceFile();
+        const string expectedMessage = "fatal error";
+
+        try
+        {
+            Logger.SetLevel(global::ConsoleLogger.LogLevel.Fatal);
+            var expectedLine = GetNextSourceLine();
+            logger.Fatal(Field.String("msg"u8, expectedMessage));
+
+            var output = GetCapturedOutput();
+            Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+            Assert.Contains($"\"_member\":\"{nameof(Fatal_UsesCompilerProvidedCallerInfo)}\"", output);
+            Assert.Contains($"\"_line\":{expectedLine}", output);
+            Assert.Contains($"\"msg\":\"{expectedMessage}\"", output);
+            Assert.Contains("\"level\":\"fatal\"", output);
+        }
+        finally
+        {
+            Logger.Return(logger);
+        }
+    }
+
+    /// <summary>
+    /// 根据字段数量显式调用对应的 Fatal 重载，确保每个重载都被覆盖到。
+    /// </summary>
+    private static void InvokeFatal(TaskLogger logger, int fieldCount, string file, string member, int line)
+    {
+        var f1 = Field.Int64("f1"u8, 1);
+        var f2 = Field.Int64("f2"u8, 2);
+        var f3 = Field.Int64("f3"u8, 3);
+        var f4 = Field.Int64("f4"u8, 4);
+        var f5 = Field.Int64("f5"u8, 5);
+        var f6 = Field.Int64("f6"u8, 6);
+        var f7 = Field.Int64("f7"u8, 7);
+        var f8 = Field.Int64("f8"u8, 8);
+        var f9 = Field.Int64("f9"u8, 9);
+        var f10 = Field.Int64("f10"u8, 10);
+        var f11 = Field.Int64("f11"u8, 11);
+        var f12 = Field.Int64("f12"u8, 12);
+        var f13 = Field.Int64("f13"u8, 13);
+        var f14 = Field.Int64("f14"u8, 14);
+        var f15 = Field.Int64("f15"u8, 15);
+        var f16 = Field.Int64("f16"u8, 16);
+        var f17 = Field.Int64("f17"u8, 17);
+        var f18 = Field.Int64("f18"u8, 18);
+        var f19 = Field.Int64("f19"u8, 19);
+        var f20 = Field.Int64("f20"u8, 20);
+
+        switch (fieldCount)
+        {
+            case 1: logger.Fatal(f1, file, member, line); return;
+            case 2: logger.Fatal(f1, f2, file, member, line); return;
+            case 3: logger.Fatal(f1, f2, f3, file, member, line); return;
+            case 4: logger.Fatal(f1, f2, f3, f4, file, member, line); return;
+            case 5: logger.Fatal(f1, f2, f3, f4, f5, file, member, line); return;
+            case 6: logger.Fatal(f1, f2, f3, f4, f5, f6, file, member, line); return;
+            case 7: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, file, member, line); return;
+            case 8: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, file, member, line); return;
+            case 9: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, file, member, line); return;
+            case 10: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, file, member, line); return;
+            case 11: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, file, member, line); return;
+            case 12: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, file, member, line); return;
+            case 13: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, file, member, line); return;
+            case 14: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, file, member, line); return;
+            case 15: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, file, member, line); return;
+            case 16: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, file, member, line); return;
+            case 17: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, file, member, line); return;
+            case 18: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, file, member, line); return;
+            case 19: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, file, member, line); return;
+            case 20: logger.Fatal(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, file, member, line); return;
+            default: throw new ArgumentOutOfRangeException(nameof(fieldCount), fieldCount, "fieldCount must be between 1 and 20.");
+        }
+    }
+
+    /// <summary>
+    /// 断言输出中包含当前重载应该写入的全部字段。
+    /// </summary>
+    private static void AssertContainsFields(string output, int fieldCount)
+    {
+        foreach (var index in Enumerable.Range(1, fieldCount))
+        {
+            Assert.Contains($"\"f{index}\":{index}", output);
+        }
+    }
+
+    /// <summary>
+    /// 返回当前源码文件路径，便于断言 CallerFilePath 的结果。
+    /// </summary>
+    private static string GetCurrentSourceFile([System.Runtime.CompilerServices.CallerFilePath] string file = "")
+    {
+        return file;
+    }
+
+    /// <summary>
+    /// 返回下一行源码行号，便于断言紧随其后的日志调用写入了正确的 CallerLineNumber。
+    /// </summary>
+    private static int GetNextSourceLine([System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        return line + 1;
     }
 }

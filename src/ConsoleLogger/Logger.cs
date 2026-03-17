@@ -96,7 +96,7 @@ public class Logger
             TagPrefix = SetGlobalTags(tags);
         }
         JsonLineUrl = jsonlineUrl;
-        if (!Uri.TryCreate(JsonLineUrl, UriKind.Absolute, out _))
+        if (!string.IsNullOrEmpty(JsonLineUrl) && !Uri.TryCreate(JsonLineUrl, UriKind.Absolute, out _))
         {
             throw new ArgumentException("Invalid jsonlineUrl.", nameof(jsonlineUrl));
         }

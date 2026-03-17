@@ -3,45 +3,126 @@ using Xunit;
 
 namespace Tests.ConsoleLogger;
 
+/// <summary>
+/// Prompt intent: 用参数化测试覆盖 ThreadLocalLogger.Warn 的全部重载和日志级别分支，避免当前文件覆盖率过低。
+/// </summary>
 public class ThreadLocalLogger_WarnTests : TestBase
 {
-    [Fact]
-    public void Warn_AllOverloads_GenerateCorrectOutput()
+    /// <summary>
+    /// 提供 1 到 20 个字段数量，用于逐个覆盖 Warn 的全部重载。
+    /// </summary>
+    public static IEnumerable<object[]> WarnFieldCounts()
+    {
+        foreach (var fieldCount in Enumerable.Range(1, 20))
+        {
+            yield return [fieldCount];
+        }
+    }
+
+    /// <summary>
+    /// 验证每个 Warn 重载都会输出对应字段和调用位置信息。
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(WarnFieldCounts))]
+    public void Warn_AllOverloads_GenerateCorrectOutput(int fieldCount)
     {
         var logger = ThreadLocalLogger.Current;
-        Logger.SetLevel(LogLevel.Warn);
-        string file = "testfile.cs";
-        string member = "TestMember";
-        int line = 123;
+        const string expectedFile = "/tmp/threadlocal-warn-tests.cs";
+        const string expectedMember = "Warn_AllOverloads_GenerateCorrectOutput";
+        const int expectedLine = 123;
 
-        // Test 1 field overload
-        var f1 = Field.String("f1"u8, "v1");
-        logger.Warn(ref f1, file, member, line);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Warn);
+
+        InvokeWarn(logger, fieldCount, expectedFile, expectedMember, expectedLine);
+
         var output = GetCapturedOutput();
-        Assert.Contains("\"f1\":\"v1\"", output);
         Assert.Contains("\"level\":\"warn\"", output);
-        ClearCapturedOutput();
+        Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+        Assert.Contains($"\"_member\":\"{expectedMember}\"", output);
+        Assert.Contains($"\"_line\":{expectedLine}", output);
+        AssertContainsFields(output, fieldCount);
+    }
 
-        // Test 20 fields overload
-        var fields = new Field[20];
-        for (int i = 0; i < 20; i++)
+    /// <summary>
+    /// 验证每个 Warn 重载在日志级别高于 Warn 时都会直接返回且不输出内容。
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(WarnFieldCounts))]
+    public void Warn_AllOverloads_RespectLogLevel(int fieldCount)
+    {
+        var logger = ThreadLocalLogger.Current;
+        const string expectedFile = "/tmp/threadlocal-warn-skip-tests.cs";
+        const string expectedMember = "Warn_AllOverloads_RespectLogLevel";
+        const int expectedLine = 456;
+
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Error);
+
+        InvokeWarn(logger, fieldCount, expectedFile, expectedMember, expectedLine);
+
+        var output = GetCapturedOutput();
+        Assert.Empty(output);
+    }
+
+    /// <summary>
+    /// 根据字段数量显式调用对应的 Warn 重载，确保当前提示词关注的所有重载都进入测试覆盖。
+    /// </summary>
+    private static void InvokeWarn(ThreadLocalLogger logger, int fieldCount, string file, string member, int line)
+    {
+        var f1 = Field.Int64("f1"u8, 1);
+        var f2 = Field.Int64("f2"u8, 2);
+        var f3 = Field.Int64("f3"u8, 3);
+        var f4 = Field.Int64("f4"u8, 4);
+        var f5 = Field.Int64("f5"u8, 5);
+        var f6 = Field.Int64("f6"u8, 6);
+        var f7 = Field.Int64("f7"u8, 7);
+        var f8 = Field.Int64("f8"u8, 8);
+        var f9 = Field.Int64("f9"u8, 9);
+        var f10 = Field.Int64("f10"u8, 10);
+        var f11 = Field.Int64("f11"u8, 11);
+        var f12 = Field.Int64("f12"u8, 12);
+        var f13 = Field.Int64("f13"u8, 13);
+        var f14 = Field.Int64("f14"u8, 14);
+        var f15 = Field.Int64("f15"u8, 15);
+        var f16 = Field.Int64("f16"u8, 16);
+        var f17 = Field.Int64("f17"u8, 17);
+        var f18 = Field.Int64("f18"u8, 18);
+        var f19 = Field.Int64("f19"u8, 19);
+        var f20 = Field.Int64("f20"u8, 20);
+
+        switch (fieldCount)
         {
-            fields[i] = Field.Int64(System.Text.Encoding.UTF8.GetBytes($"f{i + 1}"), i + 1);
+            case 1: logger.Warn(f1, file, member, line); return;
+            case 2: logger.Warn(f1, f2, file, member, line); return;
+            case 3: logger.Warn(f1, f2, f3, file, member, line); return;
+            case 4: logger.Warn(f1, f2, f3, f4, file, member, line); return;
+            case 5: logger.Warn(f1, f2, f3, f4, f5, file, member, line); return;
+            case 6: logger.Warn(f1, f2, f3, f4, f5, f6, file, member, line); return;
+            case 7: logger.Warn(f1, f2, f3, f4, f5, f6, f7, file, member, line); return;
+            case 8: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, file, member, line); return;
+            case 9: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, file, member, line); return;
+            case 10: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, file, member, line); return;
+            case 11: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, file, member, line); return;
+            case 12: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, file, member, line); return;
+            case 13: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, file, member, line); return;
+            case 14: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, file, member, line); return;
+            case 15: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, file, member, line); return;
+            case 16: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, file, member, line); return;
+            case 17: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, file, member, line); return;
+            case 18: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, file, member, line); return;
+            case 19: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, file, member, line); return;
+            case 20: logger.Warn(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, file, member, line); return;
+            default: throw new ArgumentOutOfRangeException(nameof(fieldCount), fieldCount, "fieldCount must be between 1 and 20.");
         }
+    }
 
-        logger.Warn(
-            ref fields[0], ref fields[1], ref fields[2], ref fields[3], ref fields[4],
-            ref fields[5], ref fields[6], ref fields[7], ref fields[8], ref fields[9],
-            ref fields[10], ref fields[11], ref fields[12], ref fields[13], ref fields[14],
-            ref fields[15], ref fields[16], ref fields[17], ref fields[18], ref fields[19],
-            file, member, line
-        );
-
-        output = GetCapturedOutput();
-        for (int i = 1; i <= 20; i++)
+    /// <summary>
+    /// 断言输出中包含当前重载应该写入的全部字段。
+    /// </summary>
+    private static void AssertContainsFields(string output, int fieldCount)
+    {
+        foreach (var index in Enumerable.Range(1, fieldCount))
         {
-            Assert.Contains($"\"f{i}\":{i}", output);
+            Assert.Contains($"\"f{index}\":{index}", output);
         }
-        ClearCapturedOutput();
     }
 }

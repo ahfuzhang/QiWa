@@ -64,7 +64,7 @@ public class ThreadLocalLogger
         {
             return;
         }
-        if (Logger.Instance.OverloadPolicy == OverloadPolicy.Direct)
+        if (Logger.Instance!.OverloadPolicy == OverloadPolicy.Direct)
         {
             lock (Logger.Instance.Locker)
             {
@@ -106,6 +106,7 @@ public class ThreadLocalLogger
             return;
         }
         // 要先检查 overload 的策略
+        Debug.Assert(Logger.Instance.BufferChannel != null);
         var writer = Logger.Instance.BufferChannel.Writer;
         if (Logger.Instance.OverloadPolicy == OverloadPolicy.Block)
         {
@@ -144,7 +145,7 @@ public class ThreadLocalLogger
         try
         {
             // 查看队列的策略
-            var writer = Logger.Instance.BufferChannel.Writer;
+            var writer = Logger.Instance!.BufferChannel.Writer;
             if (Logger.Instance.OverloadPolicy == OverloadPolicy.Block)
             {
                 if (!writer.TryWrite(Buffer))

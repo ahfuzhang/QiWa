@@ -80,18 +80,19 @@ public partial class NativeWriteTests
         }
     }
 
-    [LibraryImport("libc", SetLastError = true)]
-    private static partial int pipe(int[] fds);
+    // Prompt intent: keep `make coverage` stable by avoiding transient source-generated P/Invoke files in test coverage.
+    [DllImport("libc", SetLastError = true)]
+    private static extern int pipe(int[] fds);
 
-    [LibraryImport("libc", SetLastError = true)]
-    private static partial int dup(int oldfd);
+    [DllImport("libc", SetLastError = true)]
+    private static extern int dup(int oldfd);
 
-    [LibraryImport("libc", SetLastError = true)]
-    private static partial int dup2(int oldfd, int newfd);
+    [DllImport("libc", SetLastError = true)]
+    private static extern int dup2(int oldfd, int newfd);
 
-    [LibraryImport("libc", SetLastError = true)]
-    private static partial int close(int fd);
+    [DllImport("libc", SetLastError = true)]
+    private static extern int close(int fd);
 
-    [LibraryImport("libc", SetLastError = true)]
-    private static partial nint read(int fd, IntPtr buf, nuint count);
+    [DllImport("libc", SetLastError = true)]
+    private static extern nint read(int fd, IntPtr buf, nuint count);
 }

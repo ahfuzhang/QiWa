@@ -4,9 +4,9 @@ using Xunit;
 namespace Tests.ConsoleLogger;
 
 /// <summary>
-/// Prompt intent: 用参数化测试覆盖 ThreadLocalLogger.Error 的全部重载和日志级别分支，避免当前文件覆盖率过低。
+/// Prompt intent: 用测试覆盖 TaskLogger.Error 的全部重载和调用者信息，避免当前文件没有测试导致覆盖率缺失。
 /// </summary>
-public class ThreadLocalLogger_ErrorTests : TestBase
+public class TaskLogger_ErrorTests : TestBase
 {
     /// <summary>
     /// 提供 1 到 20 个字段数量，用于逐个覆盖 Error 的全部重载。
@@ -26,21 +26,28 @@ public class ThreadLocalLogger_ErrorTests : TestBase
     [MemberData(nameof(ErrorFieldCounts))]
     public void Error_AllOverloads_GenerateCorrectOutput(int fieldCount)
     {
-        var logger = ThreadLocalLogger.Current;
-        const string expectedFile = "/tmp/threadlocal-error-tests.cs";
+        var logger = Logger.Get();
+        const string expectedFile = "/tmp/tasklogger-error-tests.cs";
         const string expectedMember = "Error_AllOverloads_GenerateCorrectOutput";
-        const int expectedLine = 123;
+        const int expectedLine = 789;
 
-        Logger.SetLevel(global::ConsoleLogger.LogLevel.Error);
+        try
+        {
+            Logger.SetLevel(global::ConsoleLogger.LogLevel.Error);
 
-        InvokeError(logger, fieldCount, expectedFile, expectedMember, expectedLine);
+            InvokeError(logger, fieldCount, expectedFile, expectedMember, expectedLine);
 
-        var output = GetCapturedOutput();
-        Assert.Contains("\"level\":\"error\"", output);
-        Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
-        Assert.Contains($"\"_member\":\"{expectedMember}\"", output);
-        Assert.Contains($"\"_line\":{expectedLine}", output);
-        AssertContainsFields(output, fieldCount);
+            var output = GetCapturedOutput();
+            Assert.Contains("\"level\":\"error\"", output);
+            Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+            Assert.Contains($"\"_member\":\"{expectedMember}\"", output);
+            Assert.Contains($"\"_line\":{expectedLine}", output);
+            AssertContainsFields(output, fieldCount);
+        }
+        finally
+        {
+            Logger.Return(logger);
+        }
     }
 
     /// <summary>
@@ -50,23 +57,59 @@ public class ThreadLocalLogger_ErrorTests : TestBase
     [MemberData(nameof(ErrorFieldCounts))]
     public void Error_AllOverloads_RespectLogLevel(int fieldCount)
     {
-        var logger = ThreadLocalLogger.Current;
-        const string expectedFile = "/tmp/threadlocal-error-skip-tests.cs";
+        var logger = Logger.Get();
+        const string expectedFile = "/tmp/tasklogger-error-skip-tests.cs";
         const string expectedMember = "Error_AllOverloads_RespectLogLevel";
         const int expectedLine = 456;
 
-        Logger.SetLevel(global::ConsoleLogger.LogLevel.Fatal);
+        try
+        {
+            Logger.SetLevel(global::ConsoleLogger.LogLevel.Fatal);
 
-        InvokeError(logger, fieldCount, expectedFile, expectedMember, expectedLine);
+            InvokeError(logger, fieldCount, expectedFile, expectedMember, expectedLine);
 
-        var output = GetCapturedOutput();
-        Assert.Empty(output);
+            var output = GetCapturedOutput();
+            Assert.Empty(output);
+        }
+        finally
+        {
+            Logger.Return(logger);
+        }
+    }
+
+    /// <summary>
+    /// 验证未显式传入参数时，Error 会保留编译器生成的调用者信息。
+    /// </summary>
+    [Fact]
+    public void Error_UsesCompilerProvidedCallerInfo()
+    {
+        var logger = Logger.Get();
+        var expectedFile = GetCurrentSourceFile();
+        const string expectedMessage = "error message";
+
+        try
+        {
+            Logger.SetLevel(global::ConsoleLogger.LogLevel.Error);
+            var expectedLine = GetNextSourceLine();
+            logger.Error(Field.String("msg"u8, expectedMessage));
+
+            var output = GetCapturedOutput();
+            Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+            Assert.Contains($"\"_member\":\"{nameof(Error_UsesCompilerProvidedCallerInfo)}\"", output);
+            Assert.Contains($"\"_line\":{expectedLine}", output);
+            Assert.Contains($"\"msg\":\"{expectedMessage}\"", output);
+            Assert.Contains("\"level\":\"error\"", output);
+        }
+        finally
+        {
+            Logger.Return(logger);
+        }
     }
 
     /// <summary>
     /// 根据字段数量显式调用对应的 Error 重载，确保当前提示词关注的所有重载都进入测试覆盖。
     /// </summary>
-    private static void InvokeError(ThreadLocalLogger logger, int fieldCount, string file, string member, int line)
+    private static void InvokeError(TaskLogger logger, int fieldCount, string file, string member, int line)
     {
         var f1 = Field.Int64("f1"u8, 1);
         var f2 = Field.Int64("f2"u8, 2);
@@ -124,5 +167,21 @@ public class ThreadLocalLogger_ErrorTests : TestBase
         {
             Assert.Contains($"\"f{index}\":{index}", output);
         }
+    }
+
+    /// <summary>
+    /// 返回当前源码文件路径，便于断言 CallerFilePath 的结果。
+    /// </summary>
+    private static string GetCurrentSourceFile([System.Runtime.CompilerServices.CallerFilePath] string file = "")
+    {
+        return file;
+    }
+
+    /// <summary>
+    /// 返回下一行源码行号，便于断言紧随其后的日志调用写入了正确的 CallerLineNumber。
+    /// </summary>
+    private static int GetNextSourceLine([System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        return line + 1;
     }
 }

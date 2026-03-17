@@ -13,6 +13,9 @@ report:
 	-targetdir:./build/coveragereport \
 	-reporttypes:Html
 
+build:
+	dotnet build QiWa.csproj -r osx-arm64
+
 test:
 	dotnet test QiWa.csproj --logger "console;verbosity=detailed" -r osx-arm64
 
@@ -43,4 +46,4 @@ logger-test:
 install10:
 	./dotnet-install.sh --channel 10.0
 
-.PHONY: test fmt
+.PHONY: build test fmt

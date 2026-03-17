@@ -406,3 +406,11 @@ dotnet_diagnostic.IDE0200.severity = suggestion
 dotnet_diagnostic.CA2016.severity = suggestion
 
 # copy from grpc-dotnet_v2.71.0/.editorconfig
+
+[Tests/**/*.cs]
+dotnet_diagnostic.CS8618.severity = none
+dotnet_diagnostic.CS8602.severity = none
+dotnet_diagnostic.xUnit1030.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.SYSLIB1054.severity = none
+dotnet_diagnostic.xUnit1031.severity = none

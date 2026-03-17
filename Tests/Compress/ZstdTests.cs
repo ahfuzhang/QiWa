@@ -202,6 +202,20 @@ public class ZstdTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void TestZstd_TryWrapFails_WithEmptyInputAndEmptyDestination()
+    {
+        // Prompt intent: only change tests, construct a zero-length input to model the failure guarded by ZstdCompressor.Compress.
+        using var compressor = new ZstdSharp.Compressor();
+        byte[] input = Array.Empty<byte>();
+        byte[] destination = Array.Empty<byte>();
+
+        bool success = compressor.TryWrap(input, destination, out int written);
+
+        Assert.False(success);
+        Assert.Equal(0, written);
+    }
+
     private static void RunTestCase(TestCase tc)
     {
         _ = Array.Empty<byte>();

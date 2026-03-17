@@ -16,7 +16,7 @@ public class LoggerTests : TestBase
     public struct SetLevelTestCase
     {
         public string Name;
-        public global::Log.LogLevel Level;
+        public global::ConsoleLogger.LogLevel Level;
     }
 
     [Fact]
@@ -24,11 +24,11 @@ public class LoggerTests : TestBase
     {
         var testCases = new SetLevelTestCase[]
         {
-            new() { Name = "Fatal level", Level = global::Log.LogLevel.Fatal },
-            new() { Name = "Error level", Level = global::Log.LogLevel.Error },
-            new() { Name = "Warn level", Level = global::Log.LogLevel.Warn },
-            new() { Name = "Info level", Level = global::Log.LogLevel.Info },
-            new() { Name = "Debug level", Level = global::Log.LogLevel.Debug },
+            new() { Name = "Fatal level", Level = global::ConsoleLogger.LogLevel.Fatal },
+            new() { Name = "Error level", Level = global::ConsoleLogger.LogLevel.Error },
+            new() { Name = "Warn level", Level = global::ConsoleLogger.LogLevel.Warn },
+            new() { Name = "Info level", Level = global::ConsoleLogger.LogLevel.Info },
+            new() { Name = "Debug level", Level = global::ConsoleLogger.LogLevel.Debug },
         };
 
         foreach (var tc in testCases)
@@ -39,7 +39,7 @@ public class LoggerTests : TestBase
         }
 
         // Reset to Debug for other tests
-        Logger.SetLevel(global::Log.LogLevel.Debug);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Debug);
     }
 
     #endregion
@@ -144,7 +144,8 @@ public class LoggerTests : TestBase
             Assert.NotNull(logger);
 
             // Use the logger (add some fields)
-            logger.WithFields(Field.String("key"u8, "value"));
+            var scopedLogger = logger.WithFields(Field.String("key"u8, "value"));
+            Logger.Return(scopedLogger);
 
             // Return it
             Logger.Return(logger);
@@ -155,23 +156,23 @@ public class LoggerTests : TestBase
 
     #endregion
 
-    #region global::Log.LogLevel Enum Tests
+    #region global::ConsoleLogger.LogLevel Enum Tests
 
     [Fact]
     public void LogLevel_HasCorrectValues()
     {
         // Verify enum values exist and are in correct order
-        Assert.True((int)global::Log.LogLevel.Fatal < (int)global::Log.LogLevel.Error);
-        Assert.True((int)global::Log.LogLevel.Error < (int)global::Log.LogLevel.Warn);
-        Assert.True((int)global::Log.LogLevel.Warn < (int)global::Log.LogLevel.Info);
-        Assert.True((int)global::Log.LogLevel.Info < (int)global::Log.LogLevel.Debug);
+        Assert.True((int)global::ConsoleLogger.LogLevel.Fatal < (int)global::ConsoleLogger.LogLevel.Error);
+        Assert.True((int)global::ConsoleLogger.LogLevel.Error < (int)global::ConsoleLogger.LogLevel.Warn);
+        Assert.True((int)global::ConsoleLogger.LogLevel.Warn < (int)global::ConsoleLogger.LogLevel.Info);
+        Assert.True((int)global::ConsoleLogger.LogLevel.Info < (int)global::ConsoleLogger.LogLevel.Debug);
     }
 
     public struct LogLevelFilterTestCase
     {
         public string Name;
-        public global::Log.LogLevel ConfiguredLevel;
-        public global::Log.LogLevel MessageLevel;
+        public global::ConsoleLogger.LogLevel ConfiguredLevel;
+        public global::ConsoleLogger.LogLevel MessageLevel;
         public bool ShouldLog;
     }
 
@@ -181,17 +182,17 @@ public class LoggerTests : TestBase
         var testCases = new LogLevelFilterTestCase[]
         {
             // When configured level is Warn:
-            new() { Name = "Warn config, Fatal message", ConfiguredLevel = global::Log.LogLevel.Warn, MessageLevel = global::Log.LogLevel.Fatal, ShouldLog = true },
-            new() { Name = "Warn config, Error message", ConfiguredLevel = global::Log.LogLevel.Warn, MessageLevel = global::Log.LogLevel.Error, ShouldLog = true },
-            new() { Name = "Warn config, Warn message", ConfiguredLevel = global::Log.LogLevel.Warn, MessageLevel = global::Log.LogLevel.Warn, ShouldLog = true },
-            new() { Name = "Warn config, Info message", ConfiguredLevel = global::Log.LogLevel.Warn, MessageLevel = global::Log.LogLevel.Info, ShouldLog = false },
-            new() { Name = "Warn config, Debug message", ConfiguredLevel = global::Log.LogLevel.Warn, MessageLevel = global::Log.LogLevel.Debug, ShouldLog = false },
+            new() { Name = "Warn config, Fatal message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Warn, MessageLevel = global::ConsoleLogger.LogLevel.Fatal, ShouldLog = true },
+            new() { Name = "Warn config, Error message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Warn, MessageLevel = global::ConsoleLogger.LogLevel.Error, ShouldLog = true },
+            new() { Name = "Warn config, Warn message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Warn, MessageLevel = global::ConsoleLogger.LogLevel.Warn, ShouldLog = true },
+            new() { Name = "Warn config, Info message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Warn, MessageLevel = global::ConsoleLogger.LogLevel.Info, ShouldLog = false },
+            new() { Name = "Warn config, Debug message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Warn, MessageLevel = global::ConsoleLogger.LogLevel.Debug, ShouldLog = false },
 
             // When configured level is Debug (most verbose):
-            new() { Name = "Debug config, all levels", ConfiguredLevel = global::Log.LogLevel.Debug, MessageLevel = global::Log.LogLevel.Debug, ShouldLog = true },
+            new() { Name = "Debug config, all levels", ConfiguredLevel = global::ConsoleLogger.LogLevel.Debug, MessageLevel = global::ConsoleLogger.LogLevel.Debug, ShouldLog = true },
 
             // When configured level is Fatal (least verbose):
-            new() { Name = "Fatal config, Error message", ConfiguredLevel = global::Log.LogLevel.Fatal, MessageLevel = global::Log.LogLevel.Error, ShouldLog = false },
+            new() { Name = "Fatal config, Error message", ConfiguredLevel = global::ConsoleLogger.LogLevel.Fatal, MessageLevel = global::ConsoleLogger.LogLevel.Error, ShouldLog = false },
         };
 
         foreach (var tc in testCases)
@@ -217,17 +218,18 @@ public class LoggerTests : TestBase
     public void Logger_FullWorkflow_GetWithFieldsAndReturn()
     {
         // Get a TaskLogger
-        var logger = Logger.Get();
-        Assert.NotNull(logger);
+        var rootLogger = Logger.Get();
+        Assert.NotNull(rootLogger);
 
         // Add fields using WithFields
-        logger.WithFields(
+        var logger = rootLogger.WithFields(
             Field.String("service"u8, "test-service"),
             Field.Int64("request_id"u8, 12345)
         );
+        Logger.Return(rootLogger);
 
         // Log something (at Debug level which is enabled)
-        Logger.SetLevel(global::Log.LogLevel.Debug);
+        Logger.SetLevel(global::ConsoleLogger.LogLevel.Debug);
         logger.Debug(Field.String("msg"u8, "test message"));
 
         // Return to pool
@@ -238,6 +240,50 @@ public class LoggerTests : TestBase
         Assert.Contains("\"service\":\"test-service\"", output);
         Assert.Contains("\"request_id\":12345", output);
         Assert.Contains("\"msg\":\"test message\"", output);
+    }
+
+    /// <summary>
+    /// Prompt intent: 传入一个代表全局 log labels 的 Dictionary<string, string>，覆盖 Logger.Init(tags) 和 SetGlobalTags 分支。
+    /// </summary>
+    [Fact]
+    public void Logger_InitWithGlobalLabels_IncludesLabelsInPrefixAndOutput()
+    {
+        var labels = new Dictionary<string, string>
+        {
+            ["log"] = "console",
+            ["service"] = "qiwa-tests",
+        };
+
+        TaskLogger logger;
+        ClearCapturedOutput();
+        Logger.Shutdown();
+        Logger.Init(global::ConsoleLogger.LogLevel.Info, 100, labels, 1024 * 4);
+
+        try
+        {
+            Assert.NotNull(Logger.Instance);
+            Assert.NotEmpty(Logger.Instance.TagPrefix);
+
+            var tagPrefix = global::System.Text.Encoding.UTF8.GetString(Logger.Instance.TagPrefix);
+            Assert.StartsWith("{", tagPrefix, StringComparison.Ordinal);
+            Assert.Contains("\"log\":\"console\"", tagPrefix, StringComparison.Ordinal);
+            Assert.Contains("\"service\":\"qiwa-tests\"", tagPrefix, StringComparison.Ordinal);
+
+            logger = Logger.Get();
+            logger.Info(Field.String("msg"u8, "hello with labels"));
+            Logger.Return(logger);
+
+            var output = GetCapturedOutput();
+            Assert.Contains("\"log\":\"console\"", output);
+            Assert.Contains("\"service\":\"qiwa-tests\"", output);
+            Assert.Contains("\"msg\":\"hello with labels\"", output);
+            Assert.Contains("\"level\":\"info\"", output);
+        }
+        finally
+        {
+            Logger.Shutdown();
+            Logger.Init(global::ConsoleLogger.LogLevel.Debug, 100, null, 1024 * 4);
+        }
     }
 
     [Fact]
@@ -251,10 +297,10 @@ public class LoggerTests : TestBase
             tasks[i] = Task.Run(() =>
             {
                 // Basic sanity check to ensure no crashes
-                var logger = Logger.Get();
+                var rootLogger = Logger.Get();
+                var logger = rootLogger.WithFields(Field.Int64("index"u8, index));
                 Assert.NotNull(logger);
-
-                logger.WithFields(Field.Int64("index"u8, index));
+                Logger.Return(rootLogger);
                 logger.Info(Field.String("msg"u8, $"message from task {index}"));
 
                 Logger.Return(logger);

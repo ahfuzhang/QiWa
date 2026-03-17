@@ -204,7 +204,7 @@ public class Logger : IDisposable
 
     private async Task Consume()
     {
-        var reader = BufferChannel.Reader;
+        var reader = BufferChannel!.Reader;
         while (reader.TryRead(out var buffer))
         {
             if (buffer.Length == 0)
@@ -240,7 +240,7 @@ public class Logger : IDisposable
 
     private async Task ConsumeLoop()
     {
-        var reader = BufferChannel.Reader;
+        var reader = BufferChannel!.Reader;
         try
         {
             while (await reader.WaitToReadAsync(LoggerToken.Token).ConfigureAwait(false))

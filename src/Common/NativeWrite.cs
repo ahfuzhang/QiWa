@@ -1,16 +1,16 @@
+using System.Runtime.InteropServices;
+
 namespace Common;
 
 public static class NativeWrite
 {
     public static void WriteStdout(ReadOnlySpan<byte> data)
     {
-        //Console.WriteLine($"ready write len: {data.Length}");
 #if WINDOWS
         WindowsWrite(data);
 #elif UNIX
         UnixWrite(data);
 #else
-        //Console.WriteLine("PlatformNotSupportedException");
         throw new PlatformNotSupportedException();
 #endif
     }
@@ -24,7 +24,6 @@ public static class NativeWrite
         unsafe {
             fixed (byte* ptr = data) {
                 write(1, (IntPtr)ptr, (ulong)data.Length);
-                //Console.WriteLine($"write len: {data.Length}");
             }
         }
     }
@@ -52,9 +51,3 @@ public static class NativeWrite
     }
 #endif
 }
-
-// static class Syscall {
-//     [DllImport("libc", SetLastError = true)]
-//     public static extern long write(int fd, byte[] buf, ulong count);
-// }
-

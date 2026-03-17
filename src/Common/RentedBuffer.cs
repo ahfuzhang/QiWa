@@ -6,6 +6,9 @@ using System.Text.Json;
 
 namespace Common;
 
+/// <summary>
+/// 提供一个自主管理的内存分配组件。高性能，绕过 GC，但是忘记释放会导致内存泄露。
+/// </summary>
 public struct RentedBuffer : IDisposable
 {
     public byte[]? Data;
@@ -17,7 +20,6 @@ public struct RentedBuffer : IDisposable
         Rent(length);
     }
 
-    //private const string BufferNotRentedMessage = "Buffer is not rented.";
     private const string Utf8FormatterFailedMessage = "Utf8Formatter.TryFormat failed.";
 
     /// <summary>
@@ -70,12 +72,12 @@ public struct RentedBuffer : IDisposable
     }
 
     /// <summary>
-    /// 注意：调用此函数一定会在堆上创建 new string[]{}
+    /// 注意：调用此函数一定会在堆上创建 new string[]{}. AppendMulti 与 Append(string s) 区分开来。
     /// </summary>
     /// <param name="arr"></param>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Error Append(params string[] arr)
+    public Error AppendMulti(params string[] arr)
     {
         foreach (var s in arr)
         {
@@ -173,11 +175,21 @@ public struct RentedBuffer : IDisposable
     public Error Append(bool value)
     {
         Extend(maxBoolLength);
-        if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten, new StandardFormat('l')))
+        if (value)
         {
-            return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
+            "true"u8.CopyTo(Data.AsSpan(Length));
+            Length += 4;
         }
-        Length += bytesWritten;
+        else
+        {
+            "false"u8.CopyTo(Data.AsSpan(Length));
+            Length += 5;
+        }
+        // if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten, new StandardFormat('l')))
+        // {
+        //     return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
+        // }
+        // Length += bytesWritten;
         return default(Error);
     }
 
