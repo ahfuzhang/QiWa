@@ -4,13 +4,37 @@ DOTNET := ~/.dotnet/dotnet
 ROOT_DIR := $(abspath ../..)
 PRJ=Http2EchoServer
 BUILD_DIR := $(ROOT_DIR)/build/code-snippets/$(PRJ)/linux/amd64/
+# 让 build-musl 在没有 ld.lld 的环境里回退到默认 linker，修复当前提示词里的 musl 构建失败问题。
+MUSL_LINKER_ARG := $(if $(shell command -v ld.lld 2>/dev/null),-p:LinkerFlavor=lld)
 
 build:
+	# 让 build 目标生成不依赖 so 的 linux-x64 静态可执行文件，修复当前提示词里的静态链接失败问题。
+	$(DOTNET) clean $(PRJ).csproj -r linux-x64 -c Release
 	$(DOTNET) publish $(PRJ).csproj \
 	  -r linux-x64 \
 	  -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
 	  -p:PublishAot=true \
 	  -p:StripSymbols=false \
+	  -p:StaticLinkedRuntime=true \
+	  -p:StaticExecutable=true \
+	  -p:PositionIndependentExecutable=false \
+	  -p:InvariantGlobalization=true \
+	  -p:OptimizationPreference=Size \
+	  -p:CppCompilerAndLinker=clang \
+	  --self-contained true \
+	  -c Release -o $(BUILD_DIR)
+
+build-musl:
+	$(DOTNET) publish $(PRJ).csproj \
+	  -r linux-musl-x64 \
+	  -p:DefineConstants=UNIX -p:AllowUnsafeBlocks=true \
+	  -p:PublishAot=true \
+	  -p:StripSymbols=false \
+	  -p:StaticLinkedRuntime=true \
+	  -p:InvariantGlobalization=true \
+	  -p:OptimizationPreference=Size \
+	  -p:CppCompilerAndLinker=clang $(MUSL_LINKER_ARG) \
+	  -p:AdditionalNativeCompileArgs="-static" \
 	  --self-contained true \
 	  -c Release -o $(BUILD_DIR)
 
@@ -22,6 +46,22 @@ run-in-docker:
 	  -v $(BUILD_DIR):/app \
 	  --network=host \
 	  mcr.microsoft.com/dotnet/runtime:10.0 \
+	  /app/Http2EchoServer \
+	    -http2.port=9081 \
+		-http1.port=9082 \
+		-threadpool.max=1
+
+# -e DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false 
+run-in-alpine:
+	# 关闭配置热重载，避免 alpine 容器里因为 inotify 限额导致启动失败；同时不强制分配 TTY，修复当前提示词里的运行报错。
+	docker run --rm \
+	  --platform=linux/amd64 \
+	  --cpuset-cpus="19" \
+		-m 256m \
+      -e DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false \		
+	  -v $(BUILD_DIR):/app \
+	  --network=host \
+	  alpine:latest \
 	  /app/Http2EchoServer \
 	    -http2.port=9081 \
 		-http1.port=9082 \
@@ -41,7 +81,7 @@ req_http1:
 
 stress-test-http2:
 	docker run --rm -it --network host goodideal/nghttp2:latest \
-		h2load -p h2c -c 8 -t 8 --max-concurrent-streams 60 -n 1000000 \
+		h2load -p h2c -c 8 -t 8 --max-concurrent-streams 60 -n 5000000 \
 		http://127.0.0.1:9081/echo?seq=8888
 
 stress-test-http1:
