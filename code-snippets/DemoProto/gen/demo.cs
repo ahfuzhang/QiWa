@@ -97,6 +97,37 @@ namespace Demo.Protos
     }
 
     [global::ProtoBuf.ProtoContract()]
+    public partial class HelloRequest : global::ProtoBuf.IExtensible
+    {
+        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
+            => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
+
+        [global::ProtoBuf.ProtoMember(1)]
+        public AllTypesMessage Data { get; set; }
+
+    }
+
+    [global::ProtoBuf.ProtoContract()]
+    public partial class HelloResponse : global::ProtoBuf.IExtensible
+    {
+        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
+            => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
+
+        [global::ProtoBuf.ProtoMember(1)]
+        public int Code { get; set; }
+
+        [global::ProtoBuf.ProtoMember(2)]
+        [global::System.ComponentModel.DefaultValue("")]
+        public string Message { get; set; } = "";
+
+        [global::ProtoBuf.ProtoMember(3)]
+        public AllTypesMessage Data { get; set; }
+
+    }
+
+    [global::ProtoBuf.ProtoContract()]
     public enum Status
     {
         [global::ProtoBuf.ProtoEnum(Name = @"STATUS_UNSPECIFIED")]
