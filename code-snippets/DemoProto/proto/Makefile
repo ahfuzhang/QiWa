@@ -8,7 +8,11 @@ build:
 
 generate-golang:
 	mkdir -p ../gen
-	buf generate
+	buf generate . --path demo.proto
 
 install:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+dep:
+	buf dep update
+	

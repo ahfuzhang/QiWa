@@ -1,5 +1,15 @@
 version: v2
 plugins:
   - local: protoc-gen-go
-    out: ../gen
+    out: ../obj/protoc-gen-go
     opt: paths=source_relative
+  - remote: buf.build/protocolbuffers/go
+    out: ../obj/go/
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../obj/go/
+    opt: paths=source_relative
+  - remote: buf.build/protocolbuffers/csharp
+    out: ../obj/csharp
+  - remote: buf.build/grpc/csharp
+    out: ../obj/csharp

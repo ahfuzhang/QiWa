@@ -23,7 +23,15 @@ namespace Demo.Protos
         [global::System.ComponentModel.DefaultValue("")]
         public string ChildName { get; set; } = "";
 
-    }
+    
+        /// <summary>将所有 ProtoBuf 成员重置为默认值，可用于对象池复用。</summary>
+        public void Reset()
+        {
+            this.ChildId = 0;
+            this.ChildName = "";
+        }
+
+}
 
     [global::ProtoBuf.ProtoContract()]
     public partial class AllTypesMessage : global::ProtoBuf.IExtensible
@@ -94,7 +102,33 @@ namespace Demo.Protos
         [global::ProtoBuf.ProtoMap]
         public global::System.Collections.Generic.Dictionary<string, int> Scores { get; } = new global::System.Collections.Generic.Dictionary<string, int>();
 
-    }
+    
+        /// <summary>将所有 ProtoBuf 成员重置为默认值，可用于对象池复用。</summary>
+        public void Reset()
+        {
+            this.DoubleValue = 0.0;
+            this.FloatValue = 0.0;
+            this.Int32Value = 0;
+            this.Int64Value = 0;
+            this.Uint32Value = 0;
+            this.Uint64Value = 0;
+            this.Sint32Value = 0;
+            this.Sint64Value = 0;
+            this.Fixed32Value = 0;
+            this.Fixed64Value = 0;
+            this.Sfixed32Value = 0;
+            this.Sfixed64Value = 0;
+            this.BoolValue = false;
+            this.StringValue = "";
+            this.BytesValue = null;
+            this.Status = default;
+            if (this.Child != null) this.Child.Reset();
+            this.Numbers = null;
+            this.Tags.Clear();
+            this.Scores.Clear();
+        }
+
+}
 
     [global::ProtoBuf.ProtoContract()]
     public partial class HelloRequest : global::ProtoBuf.IExtensible
@@ -106,7 +140,14 @@ namespace Demo.Protos
         [global::ProtoBuf.ProtoMember(1)]
         public AllTypesMessage Data { get; set; }
 
-    }
+    
+        /// <summary>将所有 ProtoBuf 成员重置为默认值，可用于对象池复用。</summary>
+        public void Reset()
+        {
+            if (this.Data != null) this.Data.Reset();
+        }
+
+}
 
     [global::ProtoBuf.ProtoContract()]
     public partial class HelloResponse : global::ProtoBuf.IExtensible
@@ -125,7 +166,16 @@ namespace Demo.Protos
         [global::ProtoBuf.ProtoMember(3)]
         public AllTypesMessage Data { get; set; }
 
-    }
+    
+        /// <summary>将所有 ProtoBuf 成员重置为默认值，可用于对象池复用。</summary>
+        public void Reset()
+        {
+            this.Code = 0;
+            this.Message = "";
+            if (this.Data != null) this.Data.Reset();
+        }
+
+}
 
     [global::ProtoBuf.ProtoContract()]
     public enum Status
