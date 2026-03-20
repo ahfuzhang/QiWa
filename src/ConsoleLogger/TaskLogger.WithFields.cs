@@ -1,5 +1,8 @@
 namespace ConsoleLogger;
 
+// 当需要继承上一个 context 中的信息时，通过 WithField 来产生新的 TaskLogger 对象
+// 类似于 golang 中的 ctx = context.WithValue(ctx, ...)
+
 public partial class TaskLogger
 {
     public TaskLogger WithFields(Field field1)

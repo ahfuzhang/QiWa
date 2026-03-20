@@ -18,18 +18,21 @@ public enum LogLevel
 
 public class Logger
 {
-    internal static Logger? Instance;
-    const int minLogFlushIntervalMs = 100;
-    const int defaultLogBufferSize = 1024 * 128;
-    const int minLogBufferSize = 1024 * 4;
-    const int defaultFlushIntervalMs = 1000;
+    internal static Logger? Instance;  // 全局的日志对象
+
+    const int minLogFlushIntervalMs = 100;  // 最小的日志 flush 时间
+    const int defaultLogBufferSize = 1024 * 128;  // 默认的日志内存空间
+    const int minLogBufferSize = 1024 * 4;  // 最小的日志内存空间
+    const int defaultFlushIntervalMs = 1000;  // 默认的日志 flush 时间
+
     internal int FlushIntervalMs = defaultFlushIntervalMs;  // 输出日志的间隔时间
     internal LogLevel Level = LogLevel.Info;  // 全局的日志级别
-    internal readonly byte[] TagPrefix = [];
-    internal readonly int LogBufferSize = defaultLogBufferSize;
-    internal readonly CancellationTokenSource LoggerToken;
-    internal readonly string JsonLineUrl;
+    internal readonly byte[] TagPrefix = [];  // 全局的日志前缀
+    internal readonly int LogBufferSize = defaultLogBufferSize;  // 日志的内存 buffer 大小
+    internal readonly CancellationTokenSource LoggerToken;  // 系统退出的信号
+    internal readonly string JsonLineUrl;  // 日志使用 jsonline push 的地址
 
+    // 当日志库自身出问题的时候，使用 System.Diagnostics 提供的诊断库来输出
     internal static readonly ILogger DiagnosticsLogger = LoggerFactory.Create(builder =>
     {
         builder.AddConsole();
@@ -37,9 +40,19 @@ public class Logger
     }).CreateLogger<Logger>();
 
     // 内存池
-    readonly DefaultObjectPool<TaskLogger> pool;
+    readonly DefaultObjectPool<TaskLogger> pool;  // 每个 Task 都可以有自己的 TaskLogger 对象
 
-    public static void Init(LogLevel level = LogLevel.Warn, int flushIntervalMs = 1000,
+    /// <summary>
+    /// 日志库全局初始化
+    /// </summary>
+    /// <param name="level">日志级别</param>
+    /// <param name="flushIntervalMs">日志 flush 时间</param>
+    /// <param name="tags">日志的全局 tags </param>
+    /// <param name="logBufferSize">日志缓冲区大小</param>
+    /// <param name="jsonlineUrl">设置日志的 jsonline push url</param>
+    public static void Init(
+        LogLevel level = LogLevel.Warn,
+        int flushIntervalMs = 1000,
         Dictionary<string, string>? tags = null,
         int logBufferSize = defaultLogBufferSize,
         string jsonlineUrl = "")
@@ -51,17 +64,11 @@ public class Logger
             flushIntervalMs = minLogFlushIntervalMs;
         }
         Instance.FlushIntervalMs = flushIntervalMs;
-        // if (tags != null && tags.Count > 0)
-        // {
-        //     Instance.SetGlobalTags(tags);
-        // }
-        // if (logBufferSize < minLogBufferSize)
-        // {
-        //     logBufferSize = minLogBufferSize;
-        // }
-        // Instance.LogBufferSize = logBufferSize;
     }
 
+    /// <summary>
+    /// 对象池的配置
+    /// </summary>
     sealed class BufferPolicy : PooledObjectPolicy<TaskLogger>
     {
         public override TaskLogger Create()
@@ -90,7 +97,6 @@ public class Logger
             logBufferSize = minLogBufferSize;
         }
         LogBufferSize = logBufferSize;
-        //TagPrefix = ;
         if (tags != null && tags.Count > 0)
         {
             TagPrefix = SetGlobalTags(tags);
@@ -104,6 +110,10 @@ public class Logger
         pool = new DefaultObjectPool<TaskLogger>(new BufferPolicy());
     }
 
+    /// <summary>
+    /// 从内存池获取一个对象
+    /// </summary>
+    /// <returns></returns>
     public static TaskLogger Get()
     {
         Debug.Assert(Logger.Instance != null);
@@ -113,6 +123,10 @@ public class Logger
         return l;
     }
 
+    /// <summary>
+    /// 把对象放回内存池
+    /// </summary>
+    /// <param name="l"></param>
     public static void Return(TaskLogger l)
     {
         Debug.Assert(Logger.Instance != null);
@@ -154,12 +168,20 @@ public class Logger
         return temp;
     }
 
+    /// <summary>
+    /// 设置全局的日志级别
+    /// </summary>
+    /// <param name="level"></param>
     public static void SetLevel(LogLevel level)
     {
         Debug.Assert(Instance != null);
         Instance.Level = level;
     }
 
+    /// <summary>
+    /// 设置全局的日志 flush 时间
+    /// </summary>
+    /// <param name="ms"></param>
     public static void SetFlushIntervalMs(int ms)
     {
         Debug.Assert(Instance != null);
@@ -168,5 +190,17 @@ public class Logger
             ms = minLogFlushIntervalMs;
         }
         Instance.FlushIntervalMs = ms;
+    }
+
+    public static string CutFilePath(string file)
+    {
+        for (int i = file.Length - 1; i >= 0; i--)
+        {
+            if (file[i] == '/' || file[i] == '\\')
+            {
+                return file.Substring(i + 1);
+            }
+        }
+        return file;
     }
 }

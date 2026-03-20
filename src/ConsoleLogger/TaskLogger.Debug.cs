@@ -1,5 +1,7 @@
 namespace ConsoleLogger;
 
+// 重载 20 次，以支持 1 个参数到 20 个参数的情况
+
 using System.Runtime.CompilerServices;
 public partial class TaskLogger
 {
@@ -13,7 +15,6 @@ public partial class TaskLogger
         {
             return;
         }
-        //Console.WriteLine("Debug:{0}", System.Text.Encoding.UTF8.GetString(prefix.Bytes()));
         ThreadLocalLogger.Current.write1(prefix.Bytes(), ref field1, "debug", file, member, line);
     }
 

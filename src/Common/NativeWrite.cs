@@ -1,14 +1,15 @@
-using System.Runtime.InteropServices;
-
 namespace Common;
 
 public static class NativeWrite
 {
+    /// <summary>
+    /// 使用 write 系统调用
+    /// </summary>
     public static void WriteStdout(ReadOnlySpan<byte> data)
     {
 #if WINDOWS
         WindowsWrite(data);
-#elif UNIX
+#elif UNIX  // /UNIX 宏同时对应 MacOS 和 Linux
         UnixWrite(data);
 #else
         throw new PlatformNotSupportedException();

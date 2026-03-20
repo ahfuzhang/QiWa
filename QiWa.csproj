@@ -20,7 +20,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src/**/*.cs" />
+    <Compile Remove="src/Log/**/*.cs" />
+    <Compile Remove="src/MetricsPush/**/*.cs" />
     <Compile Include="Tests/**/*.cs" />
+    <Compile Remove="Tests/Log/**/*.cs" />
+    <Compile Remove="Tests/MetricsPush/**/*.cs" />
     <None Include="Tests/data/**/*" CopyToOutputDirectory="PreserveNewest" Link="data/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>

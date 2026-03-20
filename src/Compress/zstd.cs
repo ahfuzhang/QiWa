@@ -19,15 +19,11 @@ public class ZstdCompressor
         int bound = ZstdSharp.Compressor.GetCompressBound(input.Length);
         dst.Rent(bound);
         bool success = compressor.TryWrap(input, dst.Data.AsSpan(), out int written);
-        if (!success)
+        if (!success || written <= 0)
         {
+            // 当 input 的长度为 0 时，仍然也会出现 9 字节的 zstd 空帧。因此压缩总是会成功。
             dst.Dispose();
-            return (default(Common.RentedBuffer), new Common.Error { Code = 1, Message = "compressor.TryWrap fail" });
-        }
-        if (written <= 0)
-        {
-            dst.Dispose();
-            return (default(Common.RentedBuffer), new Common.Error { Code = 2, Message = $"compressor.TryWrap fail,written={written}" });
+            return (default(Common.RentedBuffer), new Common.Error { Code = 1, Message = $"compressor.TryWrap fail, written={written}" });
         }
         dst.Length = written;
         return (dst, default(Common.Error));

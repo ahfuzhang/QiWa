@@ -14,6 +14,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write1(Logger.Instance.TagPrefix, ref field1, "info", file, member, line);
     }
 
@@ -27,6 +28,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write2(Logger.Instance.TagPrefix, ref field1, ref field2, "info", file, member, line);
     }
 
@@ -40,6 +42,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write3(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, "info", file, member, line);
     }
 
@@ -53,6 +56,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write4(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, "info", file, member, line);
     }
 
@@ -66,6 +70,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write5(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, "info", file, member, line);
     }
 
@@ -79,6 +84,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write6(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, "info", file, member, line);
     }
 
@@ -92,6 +98,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write7(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, "info", file, member, line);
     }
 
@@ -105,6 +112,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write8(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, "info", file, member, line);
     }
 
@@ -118,6 +126,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write9(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, "info", file, member, line);
     }
 
@@ -131,6 +140,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write10(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, "info", file, member, line);
     }
 
@@ -144,6 +154,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write11(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, "info", file, member, line);
     }
 
@@ -157,6 +168,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write12(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, "info", file, member, line);
     }
 
@@ -170,6 +182,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write13(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, "info", file, member, line);
     }
 
@@ -183,6 +196,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write14(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, "info", file, member, line);
     }
 
@@ -196,6 +210,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write15(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, "info", file, member, line);
     }
 
@@ -209,6 +224,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write16(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, "info", file, member, line);
     }
 
@@ -222,6 +238,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write17(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, "info", file, member, line);
     }
 
@@ -235,6 +252,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write18(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, "info", file, member, line);
     }
 
@@ -248,6 +266,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write19(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, ref field19, "info", file, member, line);
     }
 
@@ -261,6 +280,7 @@ public partial class ThreadLocalLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         write20(Logger.Instance.TagPrefix, ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, ref field19, ref field20, "info", file, member, line);
     }
 }

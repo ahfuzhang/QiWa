@@ -26,6 +26,58 @@ public class ErrorTests
         Common.Error err1 = new Common.Error { Code = 1, Message = "err happend" };
         Assert.True(err1.Err());
     }
+
+    [Fact]
+    public void WithLoc_SetsCodeCorrectly()
+    {
+        var err = Common.Error.WithLoc(42u, "test", "/a/b/c.cs", "MyMethod", 10);
+        Assert.Equal(42u, err.Code);
+        Assert.True(err.Err());
+    }
+
+    [Fact]
+    public void WithLoc_UnixPath_StripsDirectory()
+    {
+        var err = Common.Error.WithLoc(1u, "msg", "/tmp/some/path/file.cs", "M", 5);
+        Assert.Contains("file.cs:5", err.Message);
+        Assert.DoesNotContain("/tmp/", err.Message);
+    }
+
+    [Fact]
+    public void WithLoc_WindowsPath_StripsDirectory()
+    {
+        var err = Common.Error.WithLoc(1u, "msg", @"C:\Users\foo\bar.cs", "M", 7);
+        Assert.Contains("bar.cs:7", err.Message);
+        Assert.DoesNotContain("C:\\", err.Message);
+    }
+
+    [Fact]
+    public void WithLoc_NoDirectory_ReturnsFilenameAsIs()
+    {
+        var err = Common.Error.WithLoc(1u, "msg", "plain.cs", "M", 1);
+        Assert.Contains("plain.cs:1", err.Message);
+    }
+
+    [Fact]
+    public void WithLoc_MessageFormat_ContainsMemberAndMessage()
+    {
+        var err = Common.Error.WithLoc(3u, "something wrong", "/a/b.cs", "DoWork", 99);
+        Assert.Contains("(DoWork)", err.Message);
+        Assert.Contains("Code=3", err.Message);
+        Assert.Contains("Message=something wrong", err.Message);
+        Assert.Contains("b.cs:99", err.Message);
+    }
+
+    [Fact]
+    public void WithLoc_CallerAttributes_FillsFileAndLine()
+    {
+        // 不显式传 file/member/line，由编译器通过 Caller 属性填充
+        var err = Common.Error.WithLoc(5u, "auto caller");
+        Assert.True(err.Err());
+        // Message 中应包含当前文件名（不含路径）和方法名
+        Assert.Contains("UtilsTests.cs", err.Message);
+        Assert.Contains("WithLoc_CallerAttributes_FillsFileAndLine", err.Message);
+    }
 }
 
 public class RentedBuffer
@@ -460,4 +512,52 @@ public class RentedBuffer
 
         buffer.Dispose();
     }
+}
+
+public class GetExceptionLocationTests
+{
+    [Fact]
+    public void NullException_ReturnsEmpty()
+    {
+        var result = Common.Utils.GetExceptionLocation(null!);
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void ExceptionWithStackTrace_ReturnsFileAndLine()
+    {
+        // 捕获真实异常，Debug 构建含 PDB，帧有文件名和行号
+        Exception? caught = null;
+        try
+        {
+            ThrowHelper();
+        }
+        catch (Exception ex)
+        {
+            caught = ex;
+        }
+
+        var result = Common.Utils.GetExceptionLocation(caught!);
+        // Debug 构建应返回 "file=..., line=..."
+        // Release 构建无 PDB 时返回 string.Empty，两种都可接受
+        if (!string.IsNullOrEmpty(result))
+        {
+            Assert.StartsWith("file=", result);
+            Assert.Contains(", line=", result);
+        }
+    }
+
+    [Fact]
+    public void ExceptionWithNoFrameFileInfo_ReturnsEmpty()
+    {
+        // 通过 RuntimeMethodHandle 构造一个没有源文件信息的异常
+        // 即：序列化后反序列化的异常，stack trace 帧没有 PDB 信息
+        var ex = new Exception("no location");
+        // ex 未被抛出，StackTrace 为 null，GetFrames() 返回 null 或 []
+        var result = Common.Utils.GetExceptionLocation(ex);
+        Assert.Equal(string.Empty, result);
+    }
+
+    // 帮助方法：在已知位置抛出异常，使帧有明确的文件/行信息
+    private static void ThrowHelper() => throw new InvalidOperationException("test");
 }

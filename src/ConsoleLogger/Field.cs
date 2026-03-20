@@ -17,6 +17,10 @@ public enum FieldDataType
     RawJsonUtf8String,
 }
 
+/// <summary>
+/// 用 FieldValue 来代表日志输出中的 tag value
+/// FieldName 使用 ""u8 常量字符串来表示
+/// </summary>
 [StructLayout(LayoutKind.Explicit)]
 public readonly ref struct FieldValue
 {
@@ -157,6 +161,7 @@ public readonly ref struct Field
                 break;
             case FieldDataType.Utf8String:
                 rent.Append((byte)'"');
+                // todo: 如果内容为空，应该跳过这个字段
                 rent.AppendAsJsonEscapedString(this.Utf8StringValue);
                 rent.Append((byte)'"');
                 break;

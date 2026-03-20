@@ -15,11 +15,11 @@ public class Utils
                 FileAccess.Read,
                 FileShare.Read,
                 bufferSize: 1,
-                options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+                options: FileOptions.Asynchronous | FileOptions.SequentialScan).ConfigureAwait(false);
             var buf = ArrayPool<byte>.Shared.Rent(1);
             try
             {
-                int readLen = await stream.ReadAsync(buf, 0, 1).ConfigureAwait(false);  // ConfigureAwait 后续的任务在哪个上下文里无所谓
+                int readLen = await stream.ReadAsync(buf.AsMemory(0, 1)).ConfigureAwait(false);  // ConfigureAwait 后续的任务在哪个上下文里无所谓
                 return readLen == 1;
             }
             finally
@@ -63,7 +63,7 @@ public class Utils
                 FileAccess.Read,
                 FileShare.Read,
                 bufferSize: default_file_buffer_size,
-                useAsync: true);
+                useAsync: true).ConfigureAwait(false);
             if (stream.Length > READ_ALL_ALLOWED_MAX_BYTES)
             {
                 return (rent, new Common.Error { Code = 1, Message = $"Input file is too large: {stream.Length} bytes." });
@@ -90,12 +90,12 @@ public class Utils
             }
             return (rent, default(Common.Error));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // 注意： ArrayPool<byte>.Shared.Rent 相当于使用了非托管资源。
             //    必须考虑异常情况下的资源释放，否则会有内存泄露
             rent.Dispose();
-            throw;  // todo: 这个设计还是不够好
+            return (default, Common.Error.WithLoc(code: 4, message: $"Exception:{ex.Message}"));
         }
     }
 }

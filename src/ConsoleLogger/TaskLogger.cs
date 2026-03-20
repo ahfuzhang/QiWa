@@ -9,10 +9,14 @@ public partial class TaskLogger
         System.Diagnostics.Debug.Assert(Logger.Instance != null);
         prefix.Rent(Logger.Instance.TagPrefix.Length + defaultPrefixLen);
         prefix.Append(Logger.Instance.TagPrefix);
-        //Console.WriteLine(System.Text.Encoding.UTF8.GetString(prefix.Bytes()));
     }
 
     ~TaskLogger()
+    {
+        prefix.Dispose();
+    }
+
+    public void Dispose()
     {
         prefix.Dispose();
     }

@@ -8,6 +8,7 @@ namespace Common;
 
 /// <summary>
 /// 提供一个自主管理的内存分配组件。高性能，绕过 GC，但是忘记释放会导致内存泄露。
+/// 相当于重新实现了 golang 的 []byte
 /// </summary>
 public struct RentedBuffer : IDisposable
 {
@@ -185,11 +186,6 @@ public struct RentedBuffer : IDisposable
             "false"u8.CopyTo(Data.AsSpan(Length));
             Length += 5;
         }
-        // if (!System.Buffers.Text.Utf8Formatter.TryFormat(value, Data.AsSpan(Length), out int bytesWritten, new StandardFormat('l')))
-        // {
-        //     return new Error { Code = CodeOfFormatFail, Message = Utf8FormatterFailedMessage };
-        // }
-        // Length += bytesWritten;
         return default(Error);
     }
 

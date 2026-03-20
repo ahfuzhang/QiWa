@@ -13,6 +13,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write1(prefix.Bytes(), ref field1, "info", file, member, line);
     }
 
@@ -26,6 +27,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write2(prefix.Bytes(), ref field1, ref field2, "info", file, member, line);
     }
 
@@ -39,6 +41,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write3(prefix.Bytes(), ref field1, ref field2, ref field3, "info", file, member, line);
     }
 
@@ -52,6 +55,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write4(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, "info", file, member, line);
     }
 
@@ -65,6 +69,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write5(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, "info", file, member, line);
     }
 
@@ -78,6 +83,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write6(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, "info", file, member, line);
     }
 
@@ -91,6 +97,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write7(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, "info", file, member, line);
     }
 
@@ -104,6 +111,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write8(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, "info", file, member, line);
     }
 
@@ -117,6 +125,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write9(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, "info", file, member, line);
     }
 
@@ -130,6 +139,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write10(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, "info", file, member, line);
     }
 
@@ -143,6 +153,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write11(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, "info", file, member, line);
     }
 
@@ -156,6 +167,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write12(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, "info", file, member, line);
     }
 
@@ -169,6 +181,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write13(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, "info", file, member, line);
     }
 
@@ -182,6 +195,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write14(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, "info", file, member, line);
     }
 
@@ -195,6 +209,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write15(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, "info", file, member, line);
     }
 
@@ -208,6 +223,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write16(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, "info", file, member, line);
     }
 
@@ -221,6 +237,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write17(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, "info", file, member, line);
     }
 
@@ -234,6 +251,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write18(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, "info", file, member, line);
     }
 
@@ -247,6 +265,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write19(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, ref field19, "info", file, member, line);
     }
 
@@ -260,6 +279,7 @@ public partial class TaskLogger
         {
             return;
         }
+        file = Logger.CutFilePath(file);
         ThreadLocalLogger.Current.write20(prefix.Bytes(), ref field1, ref field2, ref field3, ref field4, ref field5, ref field6, ref field7, ref field8, ref field9, ref field10, ref field11, ref field12, ref field13, ref field14, ref field15, ref field16, ref field17, ref field18, ref field19, ref field20, "info", file, member, line);
     }
 }

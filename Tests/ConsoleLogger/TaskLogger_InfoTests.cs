@@ -39,7 +39,7 @@ public class TaskLogger_InfoTests : TestBase
 
             var output = GetCapturedOutput();
             Assert.Contains("\"level\":\"info\"", output);
-            Assert.Contains($"\"_file\":\"{expectedFile}\"", output);
+            Assert.Contains($"\"_file\":\"{System.IO.Path.GetFileName(expectedFile)}\"", output);
             Assert.Contains($"\"_member\":\"{expectedMember}\"", output);
             Assert.Contains($"\"_line\":{expectedLine}", output);
             AssertContainsFields(output, fieldCount);

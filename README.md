@@ -2,7 +2,7 @@
 
 # 为什么叫七娃 QiWa
 
-QiWa, in Chinese, that means the Seventh Fairy Super Power Child.
+QiWa, in Chinese, that means the Seventh Super Power Fairchild.
 
 <img src="./doc/images/qiwa.jpg" height="200"/>
 
@@ -23,10 +23,10 @@ C# 曾经是我刚工作时最喜欢的语言。时隔20多年要再次使用这
 在云时代，C# 的设计理念已经不如 Rust/golang 这样的更加现代化的语言。
 
 因此，我打算反向抄袭，把 golang 领域的经验应用到 C# 上，基于 C# 实现一个高性能的微服务框架。
-C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产于欧洲的）茶隼 sūn 】.
+C# 实现了一个高性能的 Http1/http2/grpc 的服务器 Kestrel 【红隼/（产于欧洲的）茶隼 sūn 】.
 因此这是一个 `七娃` 加上 `红隼` 的组合，本项目的官方图标如下：
 
-<img src="./doc/images/QiWa_with_Kestrel.png" style="zoom: 25%;" />
+<a href="./doc/images/QiWa_with_Kestrel.png" target="_blank"><img src="./doc/images/QiWa_with_Kestrel_small.png" /></a>
 
 # 理念
 
@@ -41,18 +41,22 @@ C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产
 
 以下是我的目标：
 * 快
+  - 满足同样功能的前提下，性能是第一个追求的指标。（不是易用，不是代码写得漂亮）
+  - 实际上，这个框架不是给人类使用的，而是给 AI 使用的。人类 -> 提示词 -> AI -> AI 生成符合框架规范的代码。
 * 使用 C#， 以 DotNetCore 库提供的 Kestrel 为基础，实现一款性能尚可的、可以支撑简单业务开发的微服务框架。
   - 主要开发语言是 C#
   - 面向 linux amd64 的服务器平台
   - 面向业务相对简单，且 qps 在 100 万 /s 左右规模的业务
+  - grpc 部分使用 https://github.com/grpc/grpc-dotnet 提供的基本协议解析能力。
 * 完全以 async/await 模式的非阻塞来实现，利用无栈协程实现高性能
 * C# 语言细节：
-  - 全面模仿 golang，完全不遵循任何面向对象的条款。一切为了简单 + 高性能
+  - 全面模仿 golang，完全不遵循面向对象的条款(直接成员访问、不使用 property、使用组合而不是继承)。一切为了简单 + 高性能
   - 尽量基于值类型而不是引用类型。也就是说，明明可以写个 class，偏偏要写成 struct
   - 不使用 try catch，仅在协程的入口处加一个 try finally。完全模仿 golang 一样 error 返回值机制。
+  - 不使用 throw，通过自定义的 Error 对象来返回异常信息。
   - API接口等，使用 out/ref 参数来使用外部提供的对象。便于框架内使用内存池。
   - 使用值类型的组合，使用泛型。避免引用类型，避免继承
-  - 编译期决定，而不是运行期决定。使用泛型是个好主意，避免使用各种复杂的接口/虚类/基类。
+  - 编译期决定，而不是运行期决定。使用泛型是个好主意，避免使用各种复杂的接口/虚类/基类。AOT YYDS!
 * CPU 方面：
   - 使用 ThreadPool.SetMaxThreads(core_count - 1) 来限制物理线程数。
     - 进一步：当程序在 ThreadPool.SetMaxThreads(1) 的情况下测试时，其性能表现应该符合 1 核的极限值。否则证明 async 机制可能存在阻塞。
@@ -60,16 +64,17 @@ C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产
   - 使用一定的 cache line 对齐来优化性能
   - 尽量避免使用锁
   - ThreadLocal 是另一个好主意：为每个物理线程分配对象，完全绕开加锁。
-  - 在 20 核的容器环境中运行，不会有严重的性能劣化。
+  - 在至多 20 核的容器环境中运行，不会有严重的性能劣化。(不会因为核变多而导致平均单核性能大幅下降)
     - 避免因为加锁等问题，导致了容器只能在很少的核上运行。
 * 内存方面：
   - GC 友好。 GC 是最大的性能杀手，重点优化 GC.
-  - 核心的 hot path 上做到 0 alloc，大量使用内存池
+  - 核心的 hot path 上做到 0 alloc，大量使用内存池 + struct + 栈上分配
   - 使用 struct 存放数据，使用栈内存分配，使用 ref 的方式避免拷贝。
   - 空间换时间，尽量使用内存池/对象池
     - 对象池， 使用 ObjectPool
     - 连接池
   - 使用 context 对象，会造成内存分配的部分都提前在 context 中定义成员。在请求开始时，从内存池获得 context 对象，请求结束后放回 context 对象。
+  - 底层使用手动内存管理 —— 使用 ArrayPool<T>.Shared.Rent(): 绕过 GC，线程缓存，高性能，但是容易内存泄露的内存分配方式。
 * 异常处理：
   - 基于 tuple 来做多返回值。不使用任何的 try catch (模仿 golang 的 error 对象)
   - try finnaly 是特例，可以使用
@@ -101,7 +106,6 @@ C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产
 * 配置管理:
   - todo: 引入更加先进的配置管理方式
   - 核心配置项都可以使用命令行传入
-  - 考虑引入群集内的配置中心的服务，以此简化配置的管理
 * 可观测性:
   - metrics:
     - 实现一个高性能的 metrics 组件，提供 counter, gauge, histogram 三种类型
@@ -117,6 +121,7 @@ C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产
     - 请求开始时，通过 context 产生对应的 logger 对象，以便打印公共字段
     - 使用 thread local, 以此来避免加锁
     - 始终输出 json 格式日志
+    - 支持 jsonline 格式的日志 push 能力
   - 封装 trace 功能
 * profiling:
   - 提供一定的 profiling 能力
@@ -163,18 +168,29 @@ C# 实现了一个高性能的 Http1/http2 的服务器 Kestrel 【红隼/（产
   - 分配不会清零的数组
 
 ```csharp
-/// 这是一个业务函数回调的样式
-/// @param ctx, req, rsp 三个参数都来自于内存池的 struct
-/// 框架中可以做到 0 alloc
-public void OnRequest(ref QiWaContext ctx, in ReqestStruct req, ref ResponseStruct rsp){}
 
 // 代码生成工具，为每个 service 的每个 method 都生成 context 类
-public struct HelloWorldContext{
+public struct HelloContext{
   // Context 类的前面两个成员是 request 格式和 response 格式
-  HelloWorldRequest req;
-  HelloWorldResponse rsp;
+  HelloRequest req;   // 框架在回调前，自动对请求数据做 Unmarshal
+  HelloResponse rsp;  // 框架在完成处理后，自动对 response 做 Marshal
+  GrpcContent gxtc;   // 如果请求来自某种协议，带上这个协议的 Context 对象
+  HttpContext hctx;
   // todo: 所有业务处理函数内的会引起堆内存分配的部分，都会在 context 中定义。
   // 从而：做到整个业务在处理过程中做到 0 alloc
+  StringBuilder tempBuffer;
+
+  // 框架会自动回调 OnRequest 方法
+  public async ValueTask<Error> OnRequest()
+  {
+    // todo: 业务的代码写在此处
+    var req = this.req;
+    var rsp = this.rsp;
+    // example
+    rsp.Data2 = req.Data1;
+    // 成功的情况下返回默认 Error 对象即可
+    return default(Error);
+  }
 }
 
 ```
