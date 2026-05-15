@@ -80,7 +80,7 @@ see: [设计目标](./doc/设计目标.md)
   - QiWa.KestrelWrap: 对 Kestrel 框架进行包装，以便简化网络服务器的开发。
   - QiWa.Compress: 对 gzip 和 zstd 库的封装
 * https://github.com/ahfuzhang/BaoHuLu
-  - 根据 protobuf 的 *.proto 文件生成 C#/golang 代码的命令行工具
+  - 根据 protobuf 的 *.proto 文件生成 C#/golang 代码的命令行工具 （依赖 QiWa.Common）
   - 目前在 protobuf/JSON + C#/golang 方面，能生成【全世界性能第一】的 数据序列化/反序列化 代码
   - 支持 golang 语法的代码模版，可以进一步生成 RPC 服务器/客户端/代理的代码
 * https://github.com/ahfuzhang/QiWa.DemoServer
