@@ -28,7 +28,9 @@ public partial class ThreadLocalLogger
     /// <summary>
     /// 仅供测试使用，用于截获输出文本，避免直接写入 stdout。
     /// </summary>
+#pragma warning disable CS0649  // 字段仅在测试代码中赋值，此处声明为 null 是正确的
     internal static Action<string>? TestOutputCapture;
+#pragma warning restore CS0649
 
     // ThreadLocal
     private static readonly ThreadLocal<ThreadLocalLogger> _threadLocal =
@@ -105,6 +107,7 @@ public partial class ThreadLocalLogger
         }
         // 上层已经加锁了
         var wrapper = NewAndGetOld();
+        // todo: UnsafeQueueUserWorkItem 可能更快 => 但是内部的函数对类有依赖，Task 会更适合的
         _ = Task.Run(async () =>
         {
             // ConfigureAwait: 恢复执行时直接在线程池的任意线程上继续，不切换上下文
@@ -112,6 +115,8 @@ public partial class ThreadLocalLogger
             wrapper = null;
         });
     }
+
+    private static readonly System.Net.Http.Headers.MediaTypeHeaderValue mediaType = new MediaTypeHeaderValue("application/json");
 
     private async Task<Common.Error> writeJsonline(BufferWrapper wrapper)
     {
@@ -124,9 +129,10 @@ public partial class ThreadLocalLogger
         }
         try
         {
-            using var ms = new MemoryStream(compressed.Data!, 0, compressed.Length, false, true);
-            using var content = new StreamContent(ms);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            using var content = new ReadOnlyMemoryContent(new ReadOnlyMemory<byte>(compressed.Data!, 0, compressed.Length));
+            //using var ms = new MemoryStream(compressed.Data!, 0, compressed.Length, false, true);
+            //using var content = new StreamContent(ms);
+            content.Headers.ContentType = mediaType;
             content.Headers.ContentEncoding.Add("zstd");
             try
             {

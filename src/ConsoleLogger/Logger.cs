@@ -169,6 +169,25 @@ public class Logger
     }
 
     /// <summary>
+    /// 将日志级别字符串（不区分大小写）解析为 <see cref="LogLevel"/> 枚举。
+    /// 支持 fatal / error / warn / info / debug，无法识别时默认返回 Warn。
+    /// </summary>
+    /// <param name="level">日志级别字符串，如 "info"、"debug" 等。</param>
+    /// <returns>对应的 <see cref="LogLevel"/> 枚举值。</returns>
+    public static LogLevel ParseLogLevel(string level)
+    {
+        return level.ToLowerInvariant() switch
+        {
+            "fatal" => LogLevel.Fatal,
+            "error" => LogLevel.Error,
+            "warn"  => LogLevel.Warn,
+            "info"  => LogLevel.Info,
+            "debug" => LogLevel.Debug,
+            _       => LogLevel.Warn
+        };
+    }
+
+    /// <summary>
     /// 设置全局的日志级别
     /// </summary>
     /// <param name="level"></param>
@@ -202,5 +221,27 @@ public class Logger
             }
         }
         return file;
+    }
+
+    /// <summary>
+    /// 解析日志全局 tags，格式为 URL query string（a=b&c=d）。
+    /// </summary>
+    public static (Dictionary<string, string>?, Common.Error) ParseTags(string? tags)
+    {
+        if (string.IsNullOrEmpty(tags))
+        {
+            return (null, Common.Error.WithLoc(code: 250, message: "No tags provided"));
+        }
+        var result = new Dictionary<string, string>();
+        foreach (var pair in tags.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2)
+            {
+                return (null, Common.Error.WithLoc(code: 251, message: $"Invalid tag format: '{pair}'. Expected key=value."));
+            }
+            result[Uri.UnescapeDataString(parts[0])] = Uri.UnescapeDataString(parts[1]);
+        }
+        return (result, default);
     }
 }

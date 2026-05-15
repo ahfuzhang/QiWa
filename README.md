@@ -166,6 +166,7 @@ C# 实现了一个高性能的 Http1/http2/grpc 的服务器 Kestrel 【红隼/�
   - 减少 GC，尽量在核心路径上 0 alloc
   - 必要的情况下使用 SIMD
   - 分配不会清零的数组
+  - 后续支持 PGO 优化
 
 ```csharp
 

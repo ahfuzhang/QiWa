@@ -1,0 +1,3 @@
+mysql:
+  dsn: "server=localhost;user id=root;password=root;persistsecurityinfo=True;port=3306;database=login_server;Max Pool Size=10"
+redis: "localhost:6379,password="

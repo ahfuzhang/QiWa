@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Common;
 
 public static class NativeWrite

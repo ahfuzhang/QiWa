@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package login_server;
+
+option csharp_namespace = "DemoLoginServer.Protos";
+
+// 登录请求，POST /login
+message LoginRequest {
+    // 用户名
+    string user_name = 1;
+    // 用户密码的 SHA256 哈希
+    string user_password_sha = 2;
+}
+
+// 登录响应
+message LoginResponse {
+    // 状态码：0 成功，非 0 失败
+    int32 code = 1;
+    // 错误信息或成功信息
+    string message = 2;
+    // 登录成功后返回的 session_id
+    string session_id = 3;
+}

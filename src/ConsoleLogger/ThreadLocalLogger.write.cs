@@ -4,7 +4,7 @@ public partial class ThreadLocalLogger
 {
     internal void write1(ReadOnlySpan<byte> prefix, ref Field field1, string levelStr, string file, string member, int line)
     {
-        lock (locker)
+        lock (locker)  // 虽然在加锁，但是每个线程都有自己的 locker，绝大多数情况下都是加锁成功的
         {
             ref Common.RentedBuffer rented = ref GetBuffer();
             if (prefix.Length == 0)

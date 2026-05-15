@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package login_server;
+
+option csharp_namespace = "DemoLoginServer.Protos";
+
+// 业务接口请求，POST /biz_logic
+message BizRequest {
+    // 业务动作名称
+    string action = 1;
+    // 会话 ID，用于鉴权
+    string session_id = 2;
+}
+
+// 业务接口响应
+message BizResponse {
+    // 状态码：0 成功，非 0 失败
+    int32 code = 1;
+    // 消息
+    string message = 2;
+    // 业务数据（将 BizRequest 结构作为 JSON 字符串返回）
+    string data = 3;
+}

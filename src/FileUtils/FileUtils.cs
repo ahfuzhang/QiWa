@@ -15,7 +15,7 @@ public class Utils
                 FileAccess.Read,
                 FileShare.Read,
                 bufferSize: 1,
-                options: FileOptions.Asynchronous | FileOptions.SequentialScan).ConfigureAwait(false);
+                options: FileOptions.Asynchronous | FileOptions.SequentialScan);
             var buf = ArrayPool<byte>.Shared.Rent(1);
             try
             {
@@ -63,7 +63,7 @@ public class Utils
                 FileAccess.Read,
                 FileShare.Read,
                 bufferSize: default_file_buffer_size,
-                useAsync: true).ConfigureAwait(false);
+                useAsync: true);
             if (stream.Length > READ_ALL_ALLOWED_MAX_BYTES)
             {
                 return (rent, new Common.Error { Code = 1, Message = $"Input file is too large: {stream.Length} bytes." });
