@@ -159,6 +159,11 @@ see: https://github.com/ahfuzhang/QiWa.DemoServer
 
 see: https://github.com/ahfuzhang/QiWa.DemoServer/blob/main/generated/Demo/Demo.GetUserInfoContext__rename.cs
 
+# 功能和性能
+
+* 主要功能：https://github.com/ahfuzhang/QiWa.DemoServer#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D
+* 性能数据：https://github.com/ahfuzhang/QiWa.DemoServer#%E6%80%A7%E8%83%BD
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
